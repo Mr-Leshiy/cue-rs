@@ -17,11 +17,6 @@ main:
     - curl -fsSL https://claude.ai/install.sh | bash
     # zsh
     - apt install -y zsh
-    # nushell
-    - wget -qO- https://apt.fury.io/nushell/gpg.key | gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
-    - echo "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" | tee /etc/apt/sources.list.d/fury-nushell.list
-    - apt update
-    - apt install -y nushell
     # neovim
     - apt-get install -y neovim
   workspace: shell_cell
