@@ -27,4 +27,4 @@ jobs:
     # - name: Clippy
     #   run: cargo clippy --all-targets
     - name: Run unit tests
-      run: cargo test --bins
+      run: cargo test
