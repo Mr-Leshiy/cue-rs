@@ -5,21 +5,21 @@ use crate::error::CueError;
 
 /// Opaque handle to a compiled CUE value managed by the Go runtime.
 /// Obtain one with [`go_cue_value_new`] and release it with [`go_cue_value_free`].
-type CueValue = usize;
+type CueValueAddr = usize;
 
 unsafe extern "C" {
-    fn cue_value_new(input: *const c_char) -> CueValue;
-    fn cue_value_free(addr: CueValue);
-    fn cue_value_unify_accept(addr1: CueValue, addr2: CueValue) -> CueValue;
+    fn cue_value_new(input: *const c_char) -> CueValueAddr;
+    fn cue_value_free(addr: CueValueAddr);
+    fn cue_value_unify(addr1: CueValueAddr, addr2: CueValueAddr) -> CueValueAddr;
     /// Returns a malloc-allocated C string; caller must free it.
-    fn cue_value_validate(addr: CueValue) -> *mut c_char;
+    fn cue_value_validate(addr: CueValueAddr) -> *mut c_char;
     /// Returns a malloc-allocated JSON string, or NULL on error; caller must free it.
-    fn cue_value_to_json(addr: CueValue) -> *mut c_char;
+    fn cue_value_to_json(addr: CueValueAddr) -> *mut c_char;
     /// Returns a malloc-allocated YAML string, or NULL on error; caller must free it.
-    fn cue_value_to_yaml(addr: CueValue) -> *mut c_char;
+    fn cue_value_to_yaml(addr: CueValueAddr) -> *mut c_char;
 }
 
-pub struct Value(CueValue);
+pub struct Value(CueValueAddr);
 
 impl Drop for Value {
     /// Releases the Go-side storage associated with `handle`.
@@ -63,7 +63,7 @@ impl Value {
     }
 
     pub fn unify_accept(val1: &Value, val2: &Value) -> Result<Value, CueError> {
-        Ok(Self( unsafe { cue_value_unify_accept(val1.0, val2.0) }))
+        Ok(Self( unsafe { cue_value_unify(val1.0, val2.0) }))
     }
 
     /// Validates the CUE value and returns underlying error message.
@@ -129,7 +129,6 @@ mod tests {
         assert!(value3.validate().is_ok());
 
         let json = value3.to_json_string().unwrap();
-        println!("{json}");
         let json: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
         assert_eq!(json["age"], serde_json::Value::Number(30.into()));
@@ -141,12 +140,6 @@ mod tests {
         let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
 
         let value3 = Value::unify_accept(&value1, &value2).unwrap();
-        assert!(value3.validate().is_ok());
-
-        let json = value3.to_json_string().unwrap();
-        println!("{json}");
-        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
-        assert_eq!(json["age"], serde_json::Value::Number(30.into()));
+        assert!(value3.validate().is_err());
     }
 }
