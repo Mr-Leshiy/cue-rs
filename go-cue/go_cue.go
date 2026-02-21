@@ -87,7 +87,7 @@ func cue_value_to_yaml(addr C.CueValue) *C.char {
 
 // <https://pkg.go.dev/cuelang.org/go/cue#Value.UnifyAccept>
 //
-//export cue_value_unify
+//export cue_value_unify_accept
 func cue_value_unify_accept(addr1 C.CueValue, addr2 C.CueValue) C.CueValue {
 	v1 := get_value(addr1)
 	if v1 == nil {
