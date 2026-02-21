@@ -42,7 +42,7 @@ impl Value {
 
     /// Encodes the CUE value as a JSON string.
     ///
-    
+
     pub fn to_json_string(&self) -> Result<String, CueError> {
         self.validate()?;
         let ptr = unsafe { cue_value_to_json(self.0) };
@@ -54,7 +54,7 @@ impl Value {
     }
 
     /// Encodes the CUE value as a YAML string.
-    
+
     pub fn to_yaml_string(&self) -> Result<String, CueError> {
         self.validate()?;
         let ptr = unsafe { cue_value_to_yaml(self.0) };
@@ -77,7 +77,9 @@ impl Value {
         if c_str.is_empty() {
             Ok(())
         } else {
-            Err(CueError::ValidationError(c_str.to_string_lossy().into_owned()))
+            Err(CueError::ValidationError(
+                c_str.to_string_lossy().into_owned(),
+            ))
         }
     }
 }
