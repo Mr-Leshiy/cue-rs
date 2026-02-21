@@ -14,9 +14,9 @@ fn main() {
         .args([
             "build",
             // 	Build the listed main package, plus all packages it imports,
-	        // into a C archive file. The only callable symbols will be those
-	        // functions exported using a cgo //export comment. Requires
-	        // exactly one main package to be listed.
+            // into a C archive file. The only callable symbols will be those
+            // functions exported using a cgo //export comment. Requires
+            // exactly one main package to be listed.
             "-buildmode=c-archive",
             "-o",
             lib_out.to_str().unwrap(),
