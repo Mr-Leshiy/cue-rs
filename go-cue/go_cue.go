@@ -3,7 +3,6 @@ package main
 /*
 #include <stdint.h>
 
-// Opaque handle to a compiled CUE value managed on the Go side.
 typedef uintptr_t CueValue;
 */
 import "C"
@@ -30,12 +29,9 @@ func cue_value_new(input *C.char) C.CueValue {
 	s := C.GoString(input)
 	v := cueCtx.CompileString(s)
 
-	mu.Lock()
-	addr := uintptr(unsafe.Pointer(&v))
-	values[addr] = v
-	mu.Unlock()
-
-	return C.CueValue(addr)
+	addr := C.CueValue(uintptr(unsafe.Pointer(&v)))
+	set_value(addr, v)
+	return addr
 }
 
 //export cue_value_free
@@ -45,17 +41,12 @@ func cue_value_free(addr C.CueValue) {
 	mu.Unlock()
 }
 
-// cue_value_validate returns the error message for the given CueValue as a
-// null-terminated C string allocated with malloc. An empty string means the
-// value is valid. The caller is responsible for freeing the returned pointer.
+// <https://pkg.go.dev/cuelang.org/go/cue#Value.Validate>
 //
 //export cue_value_validate
-func cue_value_validate(handle C.CueValue) *C.char {
-	mu.Lock()
-	v, ok := values[uintptr(handle)]
-	mu.Unlock()
-
-	if !ok {
+func cue_value_validate(addr C.CueValue) *C.char {
+	v := get_value(addr)
+	if v == nil {
 		return C.CString("unknown handle")
 	}
 	if err := v.Validate(); err != nil {
@@ -64,17 +55,12 @@ func cue_value_validate(handle C.CueValue) *C.char {
 	return C.CString("")
 }
 
-// cue_value_to_json encodes the CueValue as a JSON string allocated with malloc.
-// Returns NULL on error (unknown handle or encoding failure).
-// The caller is responsible for freeing the returned pointer.
+// <https://pkg.go.dev/cuelang.org/go/cue#Value.MarshalJSON>
 //
 //export cue_value_to_json
 func cue_value_to_json(addr C.CueValue) *C.char {
-	mu.Lock()
-	v, ok := values[uintptr(addr)]
-	mu.Unlock()
-
-	if !ok {
+	v := get_value(addr)
+	if v == nil {
 		return nil
 	}
 	data, err := v.MarshalJSON()
@@ -84,24 +70,56 @@ func cue_value_to_json(addr C.CueValue) *C.char {
 	return C.CString(string(data))
 }
 
-// cue_value_to_yaml encodes the CueValue as a YAML string allocated with malloc.
-// Returns NULL on error (unknown handle or encoding failure).
-// The caller is responsible for freeing the returned pointer.
+// <https://pkg.go.dev/cuelang.org/go/encoding/yaml#Encode>
 //
 //export cue_value_to_yaml
-func cue_value_to_yaml(handle C.CueValue) *C.char {
+func cue_value_to_yaml(addr C.CueValue) *C.char {
+	v := get_value(addr)
+	if v == nil {
+		return nil
+	}
+	data, err := cueyaml.Encode(*v)
+	if err != nil {
+		return nil
+	}
+	return C.CString(string(data))
+}
+
+// <https://pkg.go.dev/cuelang.org/go/cue#Value.UnifyAccept>
+//
+//export cue_value_unify
+func cue_value_unify_accept(addr1 C.CueValue, addr2 C.CueValue) C.CueValue {
+	v1 := get_value(addr1)
+	if v1 == nil {
+		return addr1
+	}
+	v2 := get_value(addr2)
+	if v2 == nil {
+		return addr2
+	}
+	new_v := v1.Unify(*v2)
+
+	addr := C.CueValue(uintptr(unsafe.Pointer(&new_v)))
+	set_value(addr, new_v)
+
+	return addr
+}
+
+func get_value(addr C.CueValue) *cue.Value {
 	mu.Lock()
-	v, ok := values[uintptr(handle)]
+	v, ok := values[uintptr(addr)]
 	mu.Unlock()
 
 	if !ok {
 		return nil
 	}
-	data, err := cueyaml.Encode(v)
-	if err != nil {
-		return nil
-	}
-	return C.CString(string(data))
+	return &v
+}
+
+func set_value(addr C.CueValue, v cue.Value) {
+	mu.Lock()
+	values[uintptr(addr)] = v
+	mu.Unlock()
 }
 
 func main() {}

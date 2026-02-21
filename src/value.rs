@@ -9,13 +9,14 @@ type CueValue = usize;
 
 unsafe extern "C" {
     fn cue_value_new(input: *const c_char) -> CueValue;
-    fn cue_value_free(handle: CueValue);
+    fn cue_value_free(addr: CueValue);
+    fn cue_value_unify_accept(addr1: CueValue, addr2: CueValue) -> CueValue;
     /// Returns a malloc-allocated C string; caller must free it.
-    fn cue_value_validate(handle: CueValue) -> *mut c_char;
+    fn cue_value_validate(addr: CueValue) -> *mut c_char;
     /// Returns a malloc-allocated JSON string, or NULL on error; caller must free it.
-    fn cue_value_to_json(handle: CueValue) -> *mut c_char;
+    fn cue_value_to_json(addr: CueValue) -> *mut c_char;
     /// Returns a malloc-allocated YAML string, or NULL on error; caller must free it.
-    fn cue_value_to_yaml(handle: CueValue) -> *mut c_char;
+    fn cue_value_to_yaml(addr: CueValue) -> *mut c_char;
 }
 
 pub struct Value(CueValue);
@@ -23,13 +24,12 @@ pub struct Value(CueValue);
 impl Drop for Value {
     /// Releases the Go-side storage associated with `handle`.
     fn drop(&mut self) {
-        // SAFETY: handle was produced by go_cue_value_new and has not been freed.
         unsafe { cue_value_free(self.0) }
     }
 }
 
 impl Value {
-    /// Compiles `input` as a CUE expression and returns an opaque [`Value`] handle.
+    /// Compiles `input` as a CUE expression and returns an [`Value`].
     ///
     /// # Errors:
     /// This function will return an error if the supplied string contains an
@@ -37,12 +37,10 @@ impl Value {
     /// the position of the nul byte.
     pub fn new(s: &str) -> Result<Self, NulError> {
         let c_str = CString::new(s)?;
-        Ok(Value(unsafe { cue_value_new(c_str.as_ptr()) }))
+        Ok(Self(unsafe { cue_value_new(c_str.as_ptr()) }))
     }
 
     /// Encodes the CUE value as a JSON string.
-    ///
-
     pub fn to_json_string(&self) -> Result<String, CueError> {
         self.validate()?;
         let ptr = unsafe { cue_value_to_json(self.0) };
@@ -54,7 +52,6 @@ impl Value {
     }
 
     /// Encodes the CUE value as a YAML string.
-
     pub fn to_yaml_string(&self) -> Result<String, CueError> {
         self.validate()?;
         let ptr = unsafe { cue_value_to_yaml(self.0) };
@@ -65,8 +62,12 @@ impl Value {
         Ok(c_str.to_string_lossy().into_owned())
     }
 
+    pub fn unify_accept(val1: &Value, val2: &Value) -> Result<Value, CueError> {
+        Ok(Self( unsafe { cue_value_unify_accept(val1.0, val2.0) }))
+    }
+
     /// Validates the CUE value and returns underlying error message.
-    fn validate(&self) -> Result<(), CueError> {
+    pub fn validate(&self) -> Result<(), CueError> {
         // SAFETY: cue_value_validate returns a pointer from C.CString (malloc).
         // CString::from_raw takes ownership and calls free when dropped.
         let ptr = unsafe { cue_value_validate(self.0) };
@@ -117,5 +118,35 @@ mod tests {
         let yaml: serde_yml::Value = serde_yml::from_str(&yaml).unwrap();
         assert_eq!(yaml["name"], serde_yml::Value::String("alice".to_string()));
         assert_eq!(yaml["age"], serde_yml::Value::Number(30.into()));
+    }
+
+    #[test]
+    fn test_unify() {
+        let value1 = Value::new(r#"name: string, age: int "#).unwrap();
+        let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
+
+        let value3 = Value::unify(&value1, &value2).unwrap();
+        assert!(value3.validate().is_ok());
+
+        let json = value3.to_json_string().unwrap();
+        println!("{json}");
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
+        assert_eq!(json["age"], serde_json::Value::Number(30.into()));
+    }
+
+    #[test]
+    fn test_unify_2() {
+        let value1 = Value::new(r#"name: string, age: string "#).unwrap();
+        let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
+
+        let value3 = Value::unify(&value1, &value2).unwrap();
+        assert!(value3.validate().is_ok());
+
+        let json = value3.to_json_string().unwrap();
+        println!("{json}");
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
+        assert_eq!(json["age"], serde_json::Value::Number(30.into()));
     }
 }
