@@ -17,7 +17,7 @@ flowchart TD
 
 ## Requirements
 
-- **Go 1.21+** — the Go toolchain is required.
+- **Go 1.24+** — the Go toolchain is required.
 
 ## Usage
 
