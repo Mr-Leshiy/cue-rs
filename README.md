@@ -6,12 +6,13 @@ The CUE evaluation engine is written in Go with the C interface. Staticly linked
 
 ```mermaid
 flowchart LR
-    Go["Go (CUE runtime)\ncuelang.org/go"]
-    C["C interface\n(cgo export)"]
-    Rust["Rust\nsafe API"]
+    subgraph go-cue ["go-cue (libgo_cue.a)"]
+        Go["Go (CUE runtime)"]
+        C["`C` interface"]
+        Go --> C
+    end
 
-    Go -->|"compiled to\nlibgo_cue.a"| C
-    C -->|"statically linked"| Rust
+    go-cue -->|"statically linked"| Rust["`Rust`"]
 ```
 
 ## Requirements
