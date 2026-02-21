@@ -2,6 +2,9 @@
 
 Rust bindings for the [CUE](https://cuelang.org) language runtime.
 
+> [!WARNING]
+> This library is experimental. The API is unstable and it is not recommended for production use.
+
 The CUE evaluation engine is written in Go with the C interface. Staticly linked with the `Rust` code, exposing a safe `Rust` API on top.
 
 ```mermaid
