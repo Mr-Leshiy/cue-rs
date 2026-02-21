@@ -1,5 +1,7 @@
-use std::ffi::{CString, NulError};
-use std::os::raw::c_char;
+use std::{
+    ffi::{CString, NulError},
+    os::raw::c_char,
+};
 
 use crate::error::CueError;
 
@@ -10,7 +12,10 @@ type CueValueAddr = usize;
 unsafe extern "C" {
     fn cue_value_new(input: *const c_char) -> CueValueAddr;
     fn cue_value_free(addr: CueValueAddr);
-    fn cue_value_unify(addr1: CueValueAddr, addr2: CueValueAddr) -> CueValueAddr;
+    fn cue_value_unify(
+        addr1: CueValueAddr,
+        addr2: CueValueAddr,
+    ) -> CueValueAddr;
     /// Returns a malloc-allocated C string; caller must free it.
     fn cue_value_validate(addr: CueValueAddr) -> *mut c_char;
     /// Returns a malloc-allocated JSON string, or NULL on error; caller must free it.
@@ -41,8 +46,11 @@ impl Value {
     }
 
     /// <https://pkg.go.dev/cuelang.org/go/cue#Value.Unify>
-    pub fn unify(val1: &Value, val2: &Value) -> Result<Value, CueError> {
-        Ok(Self( unsafe { cue_value_unify(val1.0, val2.0) }))
+    pub fn unify(
+        val1: &Value,
+        val2: &Value,
+    ) -> Result<Value, CueError> {
+        Ok(Self(unsafe { cue_value_unify(val1.0, val2.0) }))
     }
 
     /// Validates the CUE value and returns underlying error message.
