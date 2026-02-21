@@ -10,8 +10,12 @@ type CueValue = usize;
 unsafe extern "C" {
     fn cue_value_new(input: *const c_char) -> CueValue;
     fn cue_value_free(handle: CueValue);
-        /// Returns a malloc-allocated C string; caller must free it.
+    /// Returns a malloc-allocated C string; caller must free it.
     fn cue_value_validate(handle: CueValue) -> *mut c_char;
+    /// Returns a malloc-allocated JSON string, or NULL on error; caller must free it.
+    fn cue_value_to_json(handle: CueValue) -> *mut c_char;
+    /// Returns a malloc-allocated YAML string, or NULL on error; caller must free it.
+    fn cue_value_to_yaml(handle: CueValue) -> *mut c_char;
 }
 
 pub struct Value(CueValue);
@@ -36,13 +40,33 @@ impl Value {
         Ok(Value(unsafe { cue_value_new(c_str.as_ptr()) }))
     }
 
-    /// Validates the CUE value and returns any error message.
+    /// Encodes the CUE value as a JSON string.
     ///
-    /// Returns `Ok(())` when the value is valid.
-    /// 
-    /// Errors:
-    /// 
-    pub fn validate(&self) -> Result<(), CueError> {
+    
+    pub fn to_json_string(&self) -> Result<String, CueError> {
+        self.validate()?;
+        let ptr = unsafe { cue_value_to_json(self.0) };
+        if ptr.is_null() {
+            return Err(CueError::InvalidValuePointerAddress);
+        }
+        let c_str = unsafe { CString::from_raw(ptr) };
+        Ok(c_str.to_string_lossy().into_owned())
+    }
+
+    /// Encodes the CUE value as a YAML string.
+    
+    pub fn to_yaml_string(&self) -> Result<String, CueError> {
+        self.validate()?;
+        let ptr = unsafe { cue_value_to_yaml(self.0) };
+        if ptr.is_null() {
+            return Err(CueError::InvalidValuePointerAddress);
+        }
+        let c_str = unsafe { CString::from_raw(ptr) };
+        Ok(c_str.to_string_lossy().into_owned())
+    }
+
+    /// Validates the CUE value and returns underlying error message.
+    fn validate(&self) -> Result<(), CueError> {
         // SAFETY: cue_value_validate returns a pointer from C.CString (malloc).
         // CString::from_raw takes ownership and calls free when dropped.
         let ptr = unsafe { cue_value_validate(self.0) };
@@ -73,5 +97,23 @@ mod tests {
         // Unclosed brace is a syntax error; validate must return an error string.
         let value = Value::new("{ name: ").unwrap();
         assert!(value.validate().is_err());
+    }
+
+    #[test]
+    fn test_to_json() {
+        let value = Value::new(r#"{ name: "alice", age: 30 }"#).unwrap();
+        let json = value.to_json_string().unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
+        assert_eq!(json["age"], serde_json::Value::Number(30.into()));
+    }
+
+    #[test]
+    fn test_to_yaml() {
+        let value = Value::new(r#"{ name: "alice", age: 30 }"#).unwrap();
+        let yaml = value.to_yaml_string().unwrap();
+        let yaml: serde_yml::Value = serde_yml::from_str(&yaml).unwrap();
+        assert_eq!(yaml["name"], serde_yml::Value::String("alice".to_string()));
+        assert_eq!(yaml["age"], serde_yml::Value::Number(30.into()));
     }
 }

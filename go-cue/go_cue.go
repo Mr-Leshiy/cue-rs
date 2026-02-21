@@ -13,6 +13,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	cueyaml "cuelang.org/go/encoding/yaml"
 )
 
 // cueCtx is a shared CUE context. Values produced by different contexts cannot
@@ -62,6 +63,44 @@ func cue_value_validate(handle C.CueValue) *C.char {
 		return C.CString(err.Error())
 	}
 	return C.CString("")
+}
+
+//export cue_value_to_json
+// cue_value_to_json encodes the CueValue as a JSON string allocated with malloc.
+// Returns NULL on error (unknown handle or encoding failure).
+// The caller is responsible for freeing the returned pointer.
+func cue_value_to_json(handle C.CueValue) *C.char {
+	mu.Lock()
+	v, ok := values[uintptr(handle)]
+	mu.Unlock()
+
+	if !ok {
+		return nil
+	}
+	data, err := v.MarshalJSON()
+	if err != nil {
+		return nil
+	}
+	return C.CString(string(data))
+}
+
+//export cue_value_to_yaml
+// cue_value_to_yaml encodes the CueValue as a YAML string allocated with malloc.
+// Returns NULL on error (unknown handle or encoding failure).
+// The caller is responsible for freeing the returned pointer.
+func cue_value_to_yaml(handle C.CueValue) *C.char {
+	mu.Lock()
+	v, ok := values[uintptr(handle)]
+	mu.Unlock()
+
+	if !ok {
+		return nil
+	}
+	data, err := cueyaml.Encode(v)
+	if err != nil {
+		return nil
+	}
+	return C.CString(string(data))
 }
 
 func main() {}
