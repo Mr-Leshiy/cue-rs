@@ -2,16 +2,14 @@ package main
 
 /*
 #include <stdint.h>
-#include <stdbool.h>
 
+// Opaque handle to a compiled CUE value managed on the Go side.
 typedef uintptr_t CueValue;
 */
 import "C"
 
 import (
 	"sync"
-
-	"unsafe"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -22,9 +20,9 @@ import (
 var cueCtx = cuecontext.New()
 
 var (
-	mu sync.Mutex
-	// To prevent dealocation, manage the allocated values inside the map
+	mu     sync.Mutex
 	values = make(map[uintptr]cue.Value)
+	nextID uintptr = 1
 )
 
 //export cue_value_new
@@ -33,10 +31,12 @@ func cue_value_new(input *C.char) C.CueValue {
 	v := cueCtx.CompileString(s)
 
 	mu.Lock()
-	addr := uintptr(unsafe.Pointer(&v))
-	values[addr] = v
+	id := nextID
+	nextID++
+	values[id] = v
 	mu.Unlock()
-	return C.CueValue(addr)
+
+	return C.CueValue(id)
 }
 
 //export cue_value_free
@@ -47,15 +47,21 @@ func cue_value_free(handle C.CueValue) {
 }
 
 //export cue_value_validate
-func cue_value_validate(handle C.CueValue) C.bool {
+// cue_value_validate returns the error message for the given CueValue as a
+// null-terminated C string allocated with malloc. An empty string means the
+// value is valid. The caller is responsible for freeing the returned pointer.
+func cue_value_validate(handle C.CueValue) *C.char {
 	mu.Lock()
 	v, ok := values[uintptr(handle)]
 	mu.Unlock()
 
 	if !ok {
-		return C.bool(false)
+		return C.CString("unknown handle")
 	}
-	return C.bool(v.Err() == nil)
+	if err := v.Validate(); err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
 }
 
 func main() {}
