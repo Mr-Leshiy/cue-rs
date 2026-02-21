@@ -30,4 +30,12 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
     println!("cargo:rustc-link-lib=static=go_cue");
+
+    // The Go runtime leaves platform system-library symbols unresolved in the
+    // static archive; the final Rust linker must supply them.
+    if cfg!(target_os = "macos") {
+        // CoreFoundation / Security are used by Go's crypto/tls and net packages.
+        println!("cargo:rustc-link-lib=framework=CoreFoundation");
+        println!("cargo:rustc-link-lib=framework=Security");
+    }
 }
