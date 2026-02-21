@@ -49,7 +49,7 @@ func cue_value_validate(addr C.CueValue) *C.char {
 	if v == nil {
 		return C.CString("unknown handle")
 	}
-	if err := v.Validate(); err != nil {
+	if err := v.Validate(cue.Concrete(true)); err != nil {
 		return C.CString(err.Error())
 	}
 	return C.CString("")

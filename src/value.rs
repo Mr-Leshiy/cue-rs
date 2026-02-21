@@ -121,11 +121,11 @@ mod tests {
     }
 
     #[test]
-    fn test_unify() {
+    fn test_unify_accept() {
         let value1 = Value::new(r#"name: string, age: int "#).unwrap();
         let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
 
-        let value3 = Value::unify(&value1, &value2).unwrap();
+        let value3 = Value::unify_accept(&value1, &value2).unwrap();
         assert!(value3.validate().is_ok());
 
         let json = value3.to_json_string().unwrap();
@@ -136,11 +136,11 @@ mod tests {
     }
 
     #[test]
-    fn test_unify_2() {
-        let value1 = Value::new(r#"name: string, age: string "#).unwrap();
+    fn test_unify_accept_2() {
+        let value1 = Value::new(r#"name: string, age: string"#).unwrap();
         let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
 
-        let value3 = Value::unify(&value1, &value2).unwrap();
+        let value3 = Value::unify_accept(&value1, &value2).unwrap();
         assert!(value3.validate().is_ok());
 
         let json = value3.to_json_string().unwrap();
