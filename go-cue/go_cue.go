@@ -10,20 +10,19 @@ import "C"
 
 import (
 	"sync"
+	"unsafe"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	cueyaml "cuelang.org/go/encoding/yaml"
 )
 
-// cueCtx is a shared CUE context. Values produced by different contexts cannot
-// be mixed, so we use a single global instance for the lifetime of the library.
-var cueCtx = cuecontext.New()
-
 var (
 	mu     sync.Mutex
 	values = make(map[uintptr]cue.Value)
-	nextID uintptr = 1
+	// cueCtx is a shared CUE context. Values produced by different contexts cannot
+	// be mixed, so we use a single global instance for the lifetime of the library.
+	cueCtx = cuecontext.New()
 )
 
 //export cue_value_new
@@ -32,25 +31,25 @@ func cue_value_new(input *C.char) C.CueValue {
 	v := cueCtx.CompileString(s)
 
 	mu.Lock()
-	id := nextID
-	nextID++
-	values[id] = v
+	addr := uintptr(unsafe.Pointer(&v))
+	values[addr] = v
 	mu.Unlock()
 
-	return C.CueValue(id)
+	return C.CueValue(addr)
 }
 
 //export cue_value_free
-func cue_value_free(handle C.CueValue) {
+func cue_value_free(addr C.CueValue) {
 	mu.Lock()
-	delete(values, uintptr(handle))
+	delete(values, uintptr(addr))
 	mu.Unlock()
 }
 
-//export cue_value_validate
 // cue_value_validate returns the error message for the given CueValue as a
 // null-terminated C string allocated with malloc. An empty string means the
 // value is valid. The caller is responsible for freeing the returned pointer.
+//
+//export cue_value_validate
 func cue_value_validate(handle C.CueValue) *C.char {
 	mu.Lock()
 	v, ok := values[uintptr(handle)]
@@ -65,13 +64,14 @@ func cue_value_validate(handle C.CueValue) *C.char {
 	return C.CString("")
 }
 
-//export cue_value_to_json
 // cue_value_to_json encodes the CueValue as a JSON string allocated with malloc.
 // Returns NULL on error (unknown handle or encoding failure).
 // The caller is responsible for freeing the returned pointer.
-func cue_value_to_json(handle C.CueValue) *C.char {
+//
+//export cue_value_to_json
+func cue_value_to_json(addr C.CueValue) *C.char {
 	mu.Lock()
-	v, ok := values[uintptr(handle)]
+	v, ok := values[uintptr(addr)]
 	mu.Unlock()
 
 	if !ok {
@@ -84,10 +84,11 @@ func cue_value_to_json(handle C.CueValue) *C.char {
 	return C.CString(string(data))
 }
 
-//export cue_value_to_yaml
 // cue_value_to_yaml encodes the CueValue as a YAML string allocated with malloc.
 // Returns NULL on error (unknown handle or encoding failure).
 // The caller is responsible for freeing the returned pointer.
+//
+//export cue_value_to_yaml
 func cue_value_to_yaml(handle C.CueValue) *C.char {
 	mu.Lock()
 	v, ok := values[uintptr(handle)]
