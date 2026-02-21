@@ -1,30 +1,39 @@
+//! Build script for cue-rs: compiles the Go CUE library into a static C archive.
+
 use std::{env, path::PathBuf, process::Command};
 
-fn main() {
+/// Compiles the Go CUE library and configures Cargo to link against it.
+///
+/// # Errors
+///
+/// Returns an error if required environment variables are missing, if the
+/// output path is not valid UTF-8, or if `go build` fails.
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=go-cue");
 
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let go_dir = manifest_dir.join("go-cue");
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
     let lib_out = out_dir.join("libgo_cue.a");
 
     let status = Command::new("go")
         .args([
             "build",
-            // 	Build the listed main package, plus all packages it imports,
+            // Build the listed main package, plus all packages it imports,
             // into a C archive file. The only callable symbols will be those
             // functions exported using a cgo //export comment. Requires
             // exactly one main package to be listed.
             "-buildmode=c-archive",
             "-o",
-            lib_out.to_str().unwrap(),
+            lib_out.to_str().ok_or("lib_out path is not valid UTF-8")?,
             ".",
         ])
         .current_dir(&go_dir)
-        .status()
-        .expect("failed to run `go build` — is Go installed?");
+        .status()?;
 
-    assert!(status.success(), "go build failed");
+    if !status.success() {
+        return Err("go build failed".into());
+    }
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
     println!("cargo:rustc-link-lib=static=go_cue");
@@ -36,4 +45,6 @@ fn main() {
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
         println!("cargo:rustc-link-lib=framework=Security");
     }
+
+    Ok(())
 }
