@@ -8,7 +8,7 @@ The CUE evaluation engine is written in Go with the C interface. Staticly linked
 flowchart LR
     subgraph go-cue ["go-cue (libgo_cue.a)"]
         Go["Go (CUE runtime)"]
-        C["`C` interface"]
+        C["C interface"]
         Go --> C
     end
 
