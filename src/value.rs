@@ -40,6 +40,28 @@ impl Value {
         Ok(Self(unsafe { cue_value_new(c_str.as_ptr()) }))
     }
 
+    /// <https://pkg.go.dev/cuelang.org/go/cue#Value.Unify>
+    pub fn unify(val1: &Value, val2: &Value) -> Result<Value, CueError> {
+        Ok(Self( unsafe { cue_value_unify(val1.0, val2.0) }))
+    }
+
+    /// Validates the CUE value and returns underlying error message.
+    /// <https://pkg.go.dev/cuelang.org/go/cue#Value.Validate>
+    pub fn validate(&self) -> Result<(), CueError> {
+        let ptr = unsafe { cue_value_validate(self.0) };
+        if ptr.is_null() {
+            return Err(CueError::InvalidValuePointerAddress);
+        }
+        let c_str = unsafe { CString::from_raw(ptr) };
+        if c_str.is_empty() {
+            Ok(())
+        } else {
+            Err(CueError::ValidationError(
+                c_str.to_string_lossy().into_owned(),
+            ))
+        }
+    }
+
     /// Encodes the CUE value as a JSON string.
     pub fn to_json_string(&self) -> Result<String, CueError> {
         self.validate()?;
@@ -60,28 +82,6 @@ impl Value {
         }
         let c_str = unsafe { CString::from_raw(ptr) };
         Ok(c_str.to_string_lossy().into_owned())
-    }
-
-    pub fn unify_accept(val1: &Value, val2: &Value) -> Result<Value, CueError> {
-        Ok(Self( unsafe { cue_value_unify(val1.0, val2.0) }))
-    }
-
-    /// Validates the CUE value and returns underlying error message.
-    pub fn validate(&self) -> Result<(), CueError> {
-        // SAFETY: cue_value_validate returns a pointer from C.CString (malloc).
-        // CString::from_raw takes ownership and calls free when dropped.
-        let ptr = unsafe { cue_value_validate(self.0) };
-        if ptr.is_null() {
-            return Err(CueError::InvalidValuePointerAddress);
-        }
-        let c_str = unsafe { CString::from_raw(ptr) };
-        if c_str.is_empty() {
-            Ok(())
-        } else {
-            Err(CueError::ValidationError(
-                c_str.to_string_lossy().into_owned(),
-            ))
-        }
     }
 }
 
@@ -121,25 +121,15 @@ mod tests {
     }
 
     #[test]
-    fn test_unify_accept() {
+    fn test_unify() {
         let value1 = Value::new(r#"name: string, age: int "#).unwrap();
         let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
-
-        let value3 = Value::unify_accept(&value1, &value2).unwrap();
+        let value3 = Value::unify(&value1, &value2).unwrap();
         assert!(value3.validate().is_ok());
 
         let json = value3.to_json_string().unwrap();
         let json: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
         assert_eq!(json["age"], serde_json::Value::Number(30.into()));
-    }
-
-    #[test]
-    fn test_unify_accept_2() {
-        let value1 = Value::new(r#"name: string, age: string"#).unwrap();
-        let value2 = Value::new(r#"name: "alice", age: 30"#).unwrap();
-
-        let value3 = Value::unify_accept(&value1, &value2).unwrap();
-        assert!(value3.validate().is_err());
     }
 }
