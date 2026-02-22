@@ -5,7 +5,7 @@ use std::{
     os::raw::c_char,
 };
 
-use crate::error::CueError;
+use crate::error::{CueError, YmlValidationError};
 
 /// Opaque handle to a compiled CUE value managed by the Go runtime.
 /// Obtain one with [`cue_value_new`] and release it with [`cue_value_free`].
@@ -27,6 +27,11 @@ unsafe extern "C" {
     fn cue_value_to_json(addr: CueValueAddr) -> *mut c_char;
     /// Returns a malloc-allocated YAML string, or NULL on error; caller must free it.
     fn cue_value_to_yaml(addr: CueValueAddr) -> *mut c_char;
+    /// Returns a malloc-allocated C string; caller must free it.
+    fn cue_value_validate_yaml(
+        addr: CueValueAddr,
+        yaml_str: *const c_char,
+    ) -> *mut c_char;
 }
 
 /// A compiled CUE value, backed by Go runtime storage.
@@ -83,6 +88,35 @@ impl Value {
             Err(CueError::ValidationError(
                 c_str.to_string_lossy().into_owned(),
             ))
+        }
+    }
+
+    /// Validates YAML agains CUE value.
+    ///
+    /// <https://pkg.go.dev/cuelang.org/go/encoding/yaml#Validate>
+    ///
+    /// # Errors
+    ///
+    /// - Returns [`CueError::InvalidValuePointerAddress`] if the underlying C
+    /// function returns a null pointer, or [`CueError::ValidationError`] if
+    /// the value violates its constraints.
+    /// - Returns a [`NulError`] if the supplied string contains an internal
+    /// null byte; the error includes the bytes and position of the null byte.
+    pub fn validate_yaml(
+        &self,
+        yaml_str: &str,
+    ) -> Result<(), YmlValidationError> {
+        let yaml_c_str = CString::new(yaml_str)?;
+
+        let ptr = unsafe { cue_value_validate_yaml(self.0, yaml_c_str.as_ptr()) };
+        if ptr.is_null() {
+            return Err(CueError::InvalidValuePointerAddress.into());
+        }
+        let c_str = unsafe { CString::from_raw(ptr) };
+        if c_str.is_empty() {
+            Ok(())
+        } else {
+            Err(CueError::ValidationError(c_str.to_string_lossy().into_owned()).into())
         }
     }
 

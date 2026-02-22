@@ -127,5 +127,20 @@ func cue_value_unify(addr1 C.CueValueAddr, addr2 C.CueValueAddr) C.CueValueAddr 
 	return cueCtx.new_value(new_v)
 }
 
+// <https://pkg.go.dev/cuelang.org/go/encoding/yaml#Validate>
+//
+//export cue_value_validate_yaml
+func cue_value_validate_yaml(addr C.CueValueAddr, input *C.char) *C.char {
+	yaml_s := C.GoString(input)
+	v := cueCtx.get_value(addr)
+	if v == nil {
+		return nil
+	}
+	if err := cueyaml.Validate([]byte(yaml_s), *v); err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString("")
+}
+
 func main() {
 }
