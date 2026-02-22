@@ -157,6 +157,7 @@ impl Value {
 #[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::Value;
+    use crate::error::{CueError, YmlValidationError};
 
     #[test]
     fn test_validate_valid_cue_value() {
@@ -200,5 +201,45 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(json["name"], serde_json::Value::String("alice".to_string()));
         assert_eq!(json["age"], serde_json::Value::Number(30.into()));
+    }
+
+    #[test]
+    fn test_validate_yaml_valid() {
+        let schema = Value::new("{ name: string, age: int }").unwrap();
+        let yaml = "name: alice\nage: 30\n";
+        assert!(schema.validate_yaml(yaml).is_ok());
+    }
+
+    #[test]
+    fn test_validate_yaml_wrong_type() {
+        let schema = Value::new("{ name: string, age: int }").unwrap();
+        // age is a string, but the schema requires an int.
+        let yaml = "name: alice\nage: \"thirty\"\n";
+        let err = schema.validate_yaml(yaml).unwrap_err();
+        assert!(matches!(
+            err,
+            YmlValidationError::CueError(CueError::ValidationError(_))
+        ));
+    }
+
+    #[test]
+    fn test_validate_yaml_missing_required_field() {
+        let schema = Value::new("{ name: string, age: int }").unwrap();
+        // The schema requires both name and age; age is absent.
+        let yaml = "name: alice\n";
+        let err = schema.validate_yaml(yaml).unwrap_err();
+        assert!(matches!(
+            err,
+            YmlValidationError::CueError(CueError::ValidationError(_))
+        ));
+    }
+
+    #[test]
+    fn test_validate_yaml_null_byte_returns_nul_error() {
+        let schema = Value::new("{ name: string }").unwrap();
+        // A null byte inside the YAML string must produce a NulError.
+        let yaml = "name: ali\x00ce\n";
+        let err = schema.validate_yaml(yaml).unwrap_err();
+        assert!(matches!(err, YmlValidationError::NulError(_)));
     }
 }
