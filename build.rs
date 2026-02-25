@@ -2,18 +2,12 @@
 
 use std::{env, path::PathBuf, process::Command};
 
-/// Compiles the Go CUE library and configures Cargo to link against it.
-///
-/// # Errors
-///
-/// Returns an error if required environment variables are missing, if the
-/// output path is not valid UTF-8, or if `go build` fails.
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     println!("cargo:rerun-if-changed=go-cue");
 
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let go_dir = manifest_dir.join("go-cue");
-    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let lib_out = out_dir.join("libgo_cue.a");
 
     let status = Command::new("go")
@@ -25,15 +19,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // exactly one main package to be listed.
             "-buildmode=c-archive",
             "-o",
-            lib_out.to_str().ok_or("lib_out path is not valid UTF-8")?,
+            lib_out.to_str().expect("lib_out path is not valid UTF-8"),
             ".",
         ])
         .current_dir(&go_dir)
-        .status()?;
+        .status()
+        .expect("failed to run go build");
 
-    if !status.success() {
-        return Err("go build failed".into());
-    }
+    assert!(status.success(), "go build failed");
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
     println!("cargo:rustc-link-lib=static=go_cue");
@@ -45,6 +38,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
         println!("cargo:rustc-link-lib=framework=Security");
     }
-
-    Ok(())
 }
