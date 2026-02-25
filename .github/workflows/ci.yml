@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on:
   push:
@@ -10,21 +10,47 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  fmt:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - name: Run fmt
+        run: cargo +nightly fmt --check
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            apt: musl-tools
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        components: rustfmt, clippy
-    - uses: actions/setup-go@v6
-      with:
-        go-version: '1.24'
-    - name: Run fmt
-      run: cargo +nightly fmt --check
-    # - name: Clippy
-    #   run: cargo clippy --all-targets
-    - name: Run unit tests
-      run: cargo test
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+      - name: Install apt dependencies
+        if: ${{ matrix.apt }}
+        run: sudo apt-get install -y ${{ matrix.apt }}
+      - name: Run unit tests
+        run: cargo test --target ${{ matrix.target }}
