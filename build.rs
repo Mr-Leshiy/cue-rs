@@ -10,21 +10,28 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let lib_out = out_dir.join("libgo_cue.a");
 
-    let status = Command::new("go")
-        .args([
-            "build",
-            // Build the listed main package, plus all packages it imports,
-            // into a C archive file. The only callable symbols will be those
-            // functions exported using a cgo //export comment. Requires
-            // exactly one main package to be listed.
-            "-buildmode=c-archive",
-            "-o",
-            lib_out.to_str().expect("lib_out path is not valid UTF-8"),
-            ".",
-        ])
-        .current_dir(&go_dir)
-        .status()
-        .expect("failed to run go build");
+    let mut cmd = Command::new("go");
+    cmd.args([
+        "build",
+        // Build the listed main package, plus all packages it imports,
+        // into a C archive file. The only callable symbols will be those
+        // functions exported using a cgo //export comment. Requires
+        // exactly one main package to be listed.
+        "-buildmode=c-archive",
+        "-o",
+        lib_out.to_str().expect("lib_out path is not valid UTF-8"),
+        ".",
+    ])
+    .current_dir(&go_dir);
+
+    // When targeting musl, use musl-gcc so CGo compiles against musl headers
+    // rather than glibc's, which avoids unresolved references to glibc-specific
+    // fortified symbols.
+    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
+        cmd.env("CC", "musl-gcc");
+    }
+
+    let status = cmd.status().expect("failed to run go build");
 
     assert!(status.success(), "go build failed");
 
