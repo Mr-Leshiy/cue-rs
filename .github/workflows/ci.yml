@@ -36,7 +36,6 @@ jobs:
             os: ubuntu-latest
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            apt: musl-tools
 
     runs-on: ${{ matrix.os }}
 
@@ -49,8 +48,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
-      - name: Install apt dependencies
-        if: ${{ matrix.apt }}
-        run: sudo apt-get install -y ${{ matrix.apt }}
+      # - name: Install apt dependencies
+      #   if: ${{ matrix.apt }}
+      #   run: sudo apt-get install -y ${{ matrix.apt }}
       - name: Run unit tests
         run: cargo test --target ${{ matrix.target }}
