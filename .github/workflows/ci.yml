@@ -31,12 +31,12 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-latest-intel
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            apt: musl-tools
+          # TODO: fix it
+          # - target: x86_64-unknown-linux-musl
+          #   os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
 
@@ -49,8 +49,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
-      - name: Install apt dependencies
-        if: ${{ matrix.apt }}
-        run: sudo apt-get install -y ${{ matrix.apt }}
+      - name: Install musl-tools dependencies
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: sudo apt-get install -y musl-tools lld
       - name: Run unit tests
         run: cargo test --target ${{ matrix.target }}

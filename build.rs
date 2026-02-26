@@ -24,12 +24,12 @@ fn main() {
     ])
     .current_dir(&go_dir);
 
-    // When targeting musl, use musl-gcc so CGo compiles against musl headers
-    // rather than glibc's, which avoids unresolved references to glibc-specific
-    // fortified symbols.
-    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
-        cmd.env("CC", "musl-gcc");
-    }
+    // // When targeting musl, use musl-gcc so CGo compiles against musl headers
+    // // rather than glibc's, which avoids unresolved references to glibc-specific
+    // // fortified symbols.
+    // if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
+    //     cmd.env("CC", "musl-gcc");
+    // }
 
     let status = cmd.status().expect("failed to run go build");
 
