@@ -55,4 +55,4 @@ jobs:
         run: cargo build --target ${{ matrix.target }}
       - name: Check binary
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
-        run: lld target/debug/cur-rs
+        run: ldd target/debug/cur-rs
