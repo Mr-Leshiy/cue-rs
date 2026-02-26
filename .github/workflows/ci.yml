@@ -52,4 +52,4 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
         run: sudo apt-get install -y musl-tools
       - name: Run unit tests
-        run: cargo test --target ${{ matrix.target }}
+        run: cargo test --target ${{ matrix.target }} --verbose
