@@ -11,8 +11,20 @@ fn main() {
     let lib_out = out_dir.join("libgo_cue.a");
 
     let mut cmd = Command::new("go");
+    cmd.arg("build");
+
+    // When targeting musl, use musl-gcc so CGo compiles against musl headers
+    // rather than glibc's, which avoids unresolved references to glibc-specific
+    // fortified symbols.
+    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
+        cmd.env("CC", "musl-gcc");
+        cmd.args([
+            "-ldflags",
+            r#"'-linkmode external -extldflags "--static-pie"'"#,
+        ]);
+    }
+
     cmd.args([
-        "build",
         // Build the listed main package, plus all packages it imports,
         // into a C archive file. The only callable symbols will be those
         // functions exported using a cgo //export comment. Requires
@@ -23,14 +35,6 @@ fn main() {
         ".",
     ])
     .current_dir(&go_dir);
-
-    // When targeting musl, use musl-gcc so CGo compiles against musl headers
-    // rather than glibc's, which avoids unresolved references to glibc-specific
-    // fortified symbols.
-    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
-        cmd.env("CC", "musl-gcc");
-        cmd.args(["-ldflags", r#"'-linkmode external -extldflags "--static-pie"'"#]);
-    }
 
     let status = cmd.status().expect("failed to run go build");
 
