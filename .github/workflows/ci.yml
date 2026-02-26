@@ -53,3 +53,5 @@ jobs:
         run: sudo apt-get install -y musl-tools
       - name: Run unit tests
         run: cargo build --target ${{ matrix.target }} --all-targets
+      - name: Run unit tests
+        run: ls target/debug/deps
