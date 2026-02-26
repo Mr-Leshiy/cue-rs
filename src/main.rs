@@ -1,4 +1,0 @@
-//! Something
-
-/// Something
-fn main() {}
