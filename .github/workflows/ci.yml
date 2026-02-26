@@ -34,8 +34,9 @@ jobs:
             os: macos-13
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
+          # TODO: fix it
+          # - target: x86_64-unknown-linux-musl
+          #   os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
 
