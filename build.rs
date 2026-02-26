@@ -19,16 +19,14 @@ fn main() {
     if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
         cmd.env("CC", "musl-gcc");
         cmd.args(["-ldflags", "-linkmode external -extldflags '--static-pie'"]);
-        cmd.arg("-buildmode=pie");
-    } else {
-            // Build the listed main package, plus all packages it imports,
-        // into a C archive file. The only callable symbols will be those
-        // functions exported using a cgo //export comment. Requires
-        // exactly one main package to be listed.
-        cmd.arg( "-buildmode=c-archive");
     }
 
     cmd.args([
+        // Build the listed main package, plus all packages it imports,
+        // into a C archive file. The only callable symbols will be those
+        // functions exported using a cgo //export comment. Requires
+        // exactly one main package to be listed.
+        "-buildmode=c-archive",
         "-o",
         lib_out.to_str().expect("lib_out path is not valid UTF-8"),
         ".",
