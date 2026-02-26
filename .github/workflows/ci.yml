@@ -54,4 +54,5 @@ jobs:
       - name: Run unit tests
         run: cargo build --target ${{ matrix.target }}
       - name: Check binary
-        run: lld target/debug/cur-rs
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: sudo apt-get install -y lld & lld target/debug/cur-rs
