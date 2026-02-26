@@ -29,7 +29,7 @@ fn main() {
     // fortified symbols.
     if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("musl") {
         cmd.env("CC", "musl-gcc");
-        cmd.args(["-ldflags", "-linkmode external -extldflags \"--static-pie\""]);
+        cmd.args(["-ldflags", r#"'-linkmode external -extldflags "--static-pie"'"#]);
     }
 
     let status = cmd.status().expect("failed to run go build");
