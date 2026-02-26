@@ -48,8 +48,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
-      # - name: Install apt dependencies
-      #   if: ${{ matrix.apt }}
-      #   run: sudo apt-get install -y ${{ matrix.apt }}
+      - name: Install musl-tools dependencies
+        if: ${{ matrix.target }} == "x86_64-unknown-linux-musl"
+        run: sudo apt-get install -y musl-tools
       - name: Run unit tests
         run: cargo test --target ${{ matrix.target }}
