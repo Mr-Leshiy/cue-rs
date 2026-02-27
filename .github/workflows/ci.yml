@@ -27,13 +27,13 @@ jobs:
       matrix:
         include:
           - target: aarch64-apple-darwin
-            os: macos-latest
+            os: macos-14
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
           - target: x86_64-apple-darwin
-            os: macos-latest-intel
+            os: macos-15-intel
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-22.04
           # TODO: fix it
           # - target: x86_64-unknown-linux-musl
           #   os: ubuntu-latest
