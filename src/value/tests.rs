@@ -94,6 +94,36 @@ fn value_test(val: String) -> serde_json::Value {
     v_json
 }
 
+// ── unify ─────────────────────────────────────────────────────────────
+
+#[test_case("42",         "42"     => json!(42);    "identical ints")]
+#[test_case("true",       "bool"   => json!(true);  "bool value meets bool type")]
+#[test_case(r#""hello""#, "string" => json!("hello"); "string value meets string type")]
+#[test_case("1.5",        "number" => json!(1.5);   "float value meets number type")]
+#[test_case(">0",         "42"     => json!(42);    "constraint meets concrete int")]
+fn value_unify_test(
+    a: &str,
+    b: &str,
+) -> serde_json::Value {
+    let ctx = Ctx::new().unwrap();
+    let va = Value::compile_string(&ctx, a).unwrap();
+    let vb = Value::compile_string(&ctx, b).unwrap();
+    let v = Value::unify(&va, &vb);
+    serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap()
+}
+
+#[test_case("1",      "2"      ; "conflicting ints produce bottom")]
+#[test_case(r#""a""#, r#""b""# ; "conflicting strings produce bottom")]
+fn value_unify_bottom_test(
+    a: &str,
+    b: &str,
+) {
+    let ctx = Ctx::new().unwrap();
+    let va = Value::compile_string(&ctx, a).unwrap();
+    let vb = Value::compile_string(&ctx, b).unwrap();
+    assert!(Value::unify(&va, &vb).is_valid().is_err());
+}
+
 // ── is_valid ─────────────────────────────────────────────────────────
 
 #[test_case("42"        => true;  "int is valid")]

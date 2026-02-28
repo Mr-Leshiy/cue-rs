@@ -22,6 +22,10 @@ unsafe extern "C" {
         a: CueValueHandle,
         b: CueValueHandle,
     ) -> bool;
+    fn cue_unify(
+        a: CueValueHandle,
+        b: CueValueHandle,
+    ) -> CueValueHandle;
     fn cue_compile_string(
         ctx: usize,
         src: *mut c_char,
@@ -146,6 +150,20 @@ impl Value {
         });
         unsafe { drop::libc_free(ptr) };
         Ok(result)
+    }
+
+    /// Unifies two CUE values, returning the meet of the two.
+    ///
+    /// Calls `cue_unify` from libcue.  In CUE, unification is the `&`
+    /// operator: the result is the most specific value that satisfies both
+    /// operands.  If the two values are incompatible the result is the bottom
+    /// value (`_|_`); call [`Value::is_valid`] to check.
+    pub fn unify(
+        v1: &Value,
+        v2: &Value,
+    ) -> Self {
+        let handle = unsafe { cue_unify(v1.0, v2.0) };
+        Self(handle)
     }
 
     /// Validates this CUE value, returning an error if it is not valid.
