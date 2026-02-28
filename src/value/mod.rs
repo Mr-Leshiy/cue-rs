@@ -158,6 +158,7 @@ impl Value {
     /// operator: the result is the most specific value that satisfies both
     /// operands.  If the two values are incompatible the result is the bottom
     /// value (`_|_`); call [`Value::is_valid`] to check.
+    #[must_use]
     pub fn unify(
         v1: &Value,
         v2: &Value,
