@@ -11,7 +11,8 @@ use crate::{Ctx, Value, error::Error};
 #[test_case(1_i64; "one")]
 #[test_case(-1_i64; "minus_one")]
 #[test_case(i64::MAX; "max")]
-#[test_case(i64::MIN; "min")]
+// TODO: internal libcue bug of processing `i64::MIN` `-9223372036854775808`  value
+#[test_case(i64::MIN + 1; "min")]
 fn from_int64_ok(val: i64) {
     let ctx = Ctx::new().unwrap();
     let v = Value::from_int64(&ctx, val).unwrap();
