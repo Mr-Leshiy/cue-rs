@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = Ctx::new()?;
 
     // CUE schema: an object with a `string` name and a non-negative `int` age.
-    let schema = Value::compile_string(&ctx, r#"{ name: string, age: int & >=0 }"#)?;
+    let schema = Value::compile_string(&ctx, r"{ name: string, age: int & >=0 }")?;
 
     // ✓ Valid: both fields satisfy the schema.
     let valid: serde_yml::Value = serde_yml::from_str("name: alice\nage: 30")?;
