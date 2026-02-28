@@ -1,6 +1,6 @@
 //! CUE evaluation context, wrapping the `cue_ctx` handle from libcue.
 
-use crate::error::CueError;
+use crate::{drop, error::CueError};
 
 /// Opaque handle to a libcue context (`cue_ctx` = `uintptr_t`).
 type CueCtxHandle = usize;
@@ -9,9 +9,6 @@ unsafe extern "C" {
     /// Creates a new CUE evaluation context and returns an opaque handle.
     /// Returns 0 on failure.
     fn cue_newctx() -> CueCtxHandle;
-
-    /// Releases the resource identified by `handle`.
-    fn cue_free(handle: CueCtxHandle);
 }
 
 /// A CUE evaluation context backed by a libcue `cue_ctx` handle.
@@ -24,7 +21,7 @@ pub struct Ctx(CueCtxHandle);
 impl Drop for Ctx {
     /// Frees the underlying libcue context via `cue_free`.
     fn drop(&mut self) {
-        unsafe { cue_free(self.0) }
+        unsafe { drop::cue_free(self.0) }
     }
 }
 
