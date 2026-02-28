@@ -6,83 +6,83 @@ use crate::{Ctx, Value};
 // ── int64 ──────────────────────────────────────────────────────────
 
 #[test_case(
-    0.to_string()
+    0.to_string().as_str()
     => json!(0);
     "int zero"
 )]
 #[test_case(
-    1.to_string()
+    1.to_string().as_str()
     => json!(1);
     "int one"
 )]
 #[test_case(
-    (-1).to_string()
+    (-1).to_string().as_str()
     => json!(-1);
     "int minus one"
 )]
 #[test_case(
-    i32::MAX.to_string()
-    => json!(2147483647);
+    i32::MAX.to_string().as_str()
+    => json!(2_147_483_647);
     "int max"
 )]
 #[test_case(
-    i32::MIN.to_string()
-    => json!(-2147483648);
+    i32::MIN.to_string().as_str()
+    => json!(-2_147_483_648);
     "int min"
 )]
 #[test_case(
-    true.to_string()=>
+    true.to_string().as_str()=>
     json!(true);
     "true boolean"
 )]
 #[test_case(
-    false.to_string()
+    false.to_string().as_str()
     => json!(false);
     "false boolean"
 )]
 #[test_case(
-    0.0.to_string()
+    0.0.to_string().as_str()
     => json!(0);
     "double zero"
 )]
 #[test_case(
-    1.5.to_string()
+    1.5.to_string().as_str()
     => json!(1.5);
     "double positive"
 )]
 #[test_case(
-    (-1.5).to_string()
+    (-1.5).to_string().as_str()
     => json!(-1.5);
     "double negative"
 )]
 #[test_case(
-    f32::MAX.to_string()
-    => json!(3.4028235e38_f64);
+    f32::MAX.to_string().as_str()
+    => json!(3.402_823_5e38_f64);
     "double max"
 )]
 #[test_case(
-    f32::MIN.to_string()
-    => json!(-3.4028235e38_f64);
+    f32::MIN.to_string().as_str()
+    => json!(-3.402_823_5e38_f64);
     "double min"
 )]
 #[test_case(
-    format!(r#""""#)
+    r#""""#
     => json!("");
     "empty"
 )]
 #[test_case(
-    format!(r#""hello""#)
+    r#""hello""#
     => json!("hello");
     "ascii"
 )]
 #[test_case(
-    format!(r#""🦀 rust""#)
+    r#""🦀 rust""#
     => json!("🦀 rust");
     "unicode"
 )]
-fn value_test(val: String) -> serde_json::Value {
+fn value_test(val: &str) -> serde_json::Value {
     let ctx = Ctx::new().unwrap();
-    let v = Value::compile_string(&ctx, &val).unwrap();
+    let v = Value::compile_string(&ctx, val).unwrap();
     let v_from_bytes = Value::compile_bytes(&ctx, val.as_bytes()).unwrap();
     assert_eq!(v, v_from_bytes);
     let v_json = serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap();
