@@ -167,3 +167,45 @@ fn to_json_from_double(val: f64) {
     // Use bit-level equality to avoid clippy::float_cmp on exact f64 values.
     assert_eq!(parsed.as_f64().unwrap().to_bits(), val.to_bits());
 }
+
+// ── PartialEq ───────────────────────────────────────────────────────
+
+// int64
+#[test_case(|ctx: &Ctx| Value::from_int64(ctx, 0),|ctx: &Ctx| Value::from_int64(ctx, 0) => true; "0_u64 == 0_u64")]
+#[test_case(|ctx: &Ctx| Value::from_int64(ctx, 0),|ctx: &Ctx| Value::from_int64(ctx, 1) => false; "0_u64 != 1_u64")]
+#[test_case(|ctx: &Ctx| Value::from_int64(ctx, -1), |ctx: &Ctx| Value::from_int64(ctx, -1) => true; "int64_neg_eq")]
+#[test_case(|ctx: &Ctx| Value::from_int64(ctx, i64::MAX), |ctx: &Ctx| Value::from_int64(ctx, i64::MAX) => true; "int64_max_eq")]
+#[test_case(|ctx: &Ctx| Value::from_int64(ctx, i64::MAX), |ctx: &Ctx| Value::from_int64(ctx, i64::MIN + 1) => false; "int64_max_ne_min")]
+// uint64
+#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 0), |ctx: &Ctx| Value::from_uint64(ctx, 0) => true; "uint64_zero_eq")]
+#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 1), |ctx: &Ctx| Value::from_uint64(ctx, 1) => true; "uint64_one_eq")]
+#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, u64::MAX), |ctx: &Ctx| Value::from_uint64(ctx, u64::MAX) => true; "uint64_max_eq")]
+#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 0), |ctx: &Ctx| Value::from_uint64(ctx, 1) => false; "uint64_zero_ne_one")]
+// bool
+#[test_case(|ctx: &Ctx| Value::from_bool(ctx, true), |ctx: &Ctx| Value::from_bool(ctx, true) => true; "bool_true_eq")]
+#[test_case(|ctx: &Ctx| Value::from_bool(ctx, false), |ctx: &Ctx| Value::from_bool(ctx, false) => true; "bool_false_eq")]
+#[test_case(|ctx: &Ctx| Value::from_bool(ctx, true), |ctx: &Ctx| Value::from_bool(ctx, false) => false; "bool_true_ne_false")]
+// double
+#[test_case(|ctx: &Ctx| Value::from_double(ctx, 0.0), |ctx: &Ctx| Value::from_double(ctx, 0.0) => true; "double_zero_eq")]
+#[test_case(|ctx: &Ctx| Value::from_double(ctx, 1.5), |ctx: &Ctx| Value::from_double(ctx, 1.5) => true; "double_pos_eq")]
+#[test_case(|ctx: &Ctx| Value::from_double(ctx, -1.5), |ctx: &Ctx| Value::from_double(ctx, -1.5) => true; "double_neg_eq")]
+#[test_case(|ctx: &Ctx| Value::from_double(ctx, 1.5), |ctx: &Ctx| Value::from_double(ctx, 2.5) => false; "double_ne")]
+// string
+#[test_case(|ctx: &Ctx| Value::from_string(ctx, ""), |ctx: &Ctx| Value::from_string(ctx, "") => true; "string_empty_eq")]
+#[test_case(|ctx: &Ctx| Value::from_string(ctx, "hello"), |ctx: &Ctx| Value::from_string(ctx, "hello") => true; "string_ascii_eq")]
+#[test_case(|ctx: &Ctx| Value::from_string(ctx, "🦀"), |ctx: &Ctx| Value::from_string(ctx, "🦀") => true; "string_unicode_eq")]
+#[test_case(|ctx: &Ctx| Value::from_string(ctx, "hello"), |ctx: &Ctx| Value::from_string(ctx, "world") => false; "string_ne")]
+// bytes
+#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b""), |ctx: &Ctx| Value::from_bytes(ctx, b"") => true; "bytes_empty_eq")]
+#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b"hello"), |ctx: &Ctx| Value::from_bytes(ctx, b"hello") => true; "bytes_ascii_eq")]
+#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, &[0x00, 0xFF]), |ctx: &Ctx| Value::from_bytes(ctx, &[0x00, 0xFF]) => true; "bytes_arbitrary_eq")]
+#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b"foo"), |ctx: &Ctx| Value::from_bytes(ctx, b"bar") => false; "bytes_ne")]
+fn value_equal_test(
+    a: impl FnOnce(&Ctx) -> Result<Value, Error>,
+    b: impl FnOnce(&Ctx) -> Result<Value, Error>,
+) -> bool {
+    let ctx = Ctx::new().unwrap();
+    let a = a(&ctx).unwrap();
+    let b = b(&ctx).unwrap();
+    a == b
+}

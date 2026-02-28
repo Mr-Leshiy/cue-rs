@@ -14,6 +14,10 @@ use crate::{
 type CueValueHandle = usize;
 
 unsafe extern "C" {
+    fn cue_is_equal(
+        a: CueValueHandle,
+        b: CueValueHandle,
+    ) -> bool;
     fn cue_from_int64(
         ctx: usize,
         val: i64,
@@ -75,11 +79,21 @@ unsafe extern "C" {
 ///
 /// Construct one via the `Value::from_*` family of methods; the underlying
 /// handle is freed automatically when this value is dropped.
+#[derive(Debug)]
 pub struct Value(CueValueHandle);
 
 impl Drop for Value {
     fn drop(&mut self) {
         unsafe { drop::cue_free(self.0) }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(
+        &self,
+        other: &Self,
+    ) -> bool {
+        unsafe { cue_is_equal(self.0, other.0) }
     }
 }
 
