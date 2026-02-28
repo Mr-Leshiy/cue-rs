@@ -18,31 +18,19 @@ unsafe extern "C" {
         a: CueValueHandle,
         b: CueValueHandle,
     ) -> bool;
-    fn cue_from_int64(
+    fn cue_compile_string(
         ctx: usize,
-        val: i64,
-    ) -> CueValueHandle;
-    fn cue_from_uint64(
-        ctx: usize,
-        val: u64,
-    ) -> CueValueHandle;
-    fn cue_from_bool(
-        ctx: usize,
-        val: bool,
-    ) -> CueValueHandle;
-    fn cue_from_double(
-        ctx: usize,
-        val: f64,
-    ) -> CueValueHandle;
-    fn cue_from_string(
-        ctx: usize,
-        val: *mut c_char,
-    ) -> CueValueHandle;
-    fn cue_from_bytes(
+        src: *mut c_char,
+        opts: *mut core::ffi::c_void,
+        out: *mut CueValueHandle,
+    ) -> usize;
+    fn cue_compile_bytes(
         ctx: usize,
         data: *mut core::ffi::c_void,
         len: usize,
-    ) -> CueValueHandle;
+        opts: *mut core::ffi::c_void,
+        out: *mut CueValueHandle,
+    ) -> usize;
     fn cue_dec_int64(
         v: CueValueHandle,
         res: *mut i64,
@@ -77,8 +65,8 @@ unsafe extern "C" {
 
 /// A CUE value backed by a libcue `cue_value` handle.
 ///
-/// Construct one via the `Value::from_*` family of methods; the underlying
-/// handle is freed automatically when this value is dropped.
+/// Construct one via [`Value::compile_string`] or [`Value::compile_bytes`];
+/// the underlying handle is freed automatically when this value is dropped.
 #[derive(Debug)]
 pub struct Value(CueValueHandle);
 
@@ -98,106 +86,57 @@ impl PartialEq for Value {
 }
 
 impl Value {
-    /// Creates a CUE integer value from an [`i64`].
+    /// Compiles a CUE source string into a [`Value`].
     ///
     /// # Errors
     ///
-    /// Returns [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_i64(
+    /// Returns [`Error::StringContainsNul`] if `src` contains interior nul
+    /// bytes, or [`Error::Cue`] if libcue reports a compilation error.
+    pub fn compile_string(
         ctx: &Ctx,
-        val: i64,
+        src: &str,
     ) -> Result<Self, Error> {
-        let handle = unsafe { cue_from_int64(ctx.handle(), val) };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
-        }
-        Ok(Self(handle))
-    }
-
-    /// Creates a CUE integer value from a [`u64`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_u64(
-        ctx: &Ctx,
-        val: u64,
-    ) -> Result<Self, Error> {
-        let handle = unsafe { cue_from_uint64(ctx.handle(), val) };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
-        }
-        Ok(Self(handle))
-    }
-
-    /// Creates a CUE boolean value from a [`bool`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_bool(
-        ctx: &Ctx,
-        val: bool,
-    ) -> Result<Self, Error> {
-        let handle = unsafe { cue_from_bool(ctx.handle(), val) };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
-        }
-        Ok(Self(handle))
-    }
-
-    /// Creates a CUE float value from an [`f64`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_f64(
-        ctx: &Ctx,
-        val: f64,
-    ) -> Result<Self, Error> {
-        let handle = unsafe { cue_from_double(ctx.handle(), val) };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
-        }
-        Ok(Self(handle))
-    }
-
-    /// Creates a CUE string value from a Rust `&str`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CueError::StringContainsNul`] if `val` contains interior nul
-    /// bytes, or [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_string(
-        ctx: &Ctx,
-        val: &str,
-    ) -> Result<Self, Error> {
-        let cstr = std::ffi::CString::new(val).map_err(Error::StringContainsNul)?;
-        let handle = unsafe { cue_from_string(ctx.handle(), cstr.as_ptr().cast_mut()) };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
-        }
-        Ok(Self(handle))
-    }
-
-    /// Creates a CUE bytes value from a Rust `&[u8]`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`CueError::ValueCreationFailed`] if libcue returns 0.
-    pub fn from_bytes(
-        ctx: &Ctx,
-        val: &[u8],
-    ) -> Result<Self, Error> {
-        let handle = unsafe {
-            cue_from_bytes(
+        let cstr = std::ffi::CString::new(src).map_err(Error::StringContainsNul)?;
+        let mut handle: CueValueHandle = 0;
+        let err = unsafe {
+            cue_compile_string(
                 ctx.handle(),
-                val.as_ptr().cast::<core::ffi::c_void>().cast_mut(),
-                val.len(),
+                cstr.as_ptr().cast_mut(),
+                core::ptr::null_mut(),
+                &raw mut handle,
             )
         };
-        if handle == 0 {
-            return Err(Error::ValueCreationFailed);
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(Self(handle))
+    }
+
+    /// Compiles a CUE source byte slice into a [`Value`].
+    ///
+    /// Unlike [`Value::compile_string`], this accepts source that may contain
+    /// interior nul bytes (since it is passed by pointer and length rather than
+    /// as a C string).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports a compilation error.
+    pub fn compile_bytes(
+        ctx: &Ctx,
+        src: &[u8],
+    ) -> Result<Self, Error> {
+        let mut handle: CueValueHandle = 0;
+        let err = unsafe {
+            cue_compile_bytes(
+                ctx.handle(),
+                src.as_ptr().cast::<core::ffi::c_void>().cast_mut(),
+                src.len(),
+                core::ptr::null_mut(),
+                &raw mut handle,
+            )
+        };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
         }
         Ok(Self(handle))
     }
@@ -210,7 +149,7 @@ impl Value {
     ///
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
     /// not a CUE integer, or it does not fit in an [`i64`]).
-    pub fn as_i64(&self) -> Result<i64, Error> {
+    pub fn to_int64(&self) -> Result<i64, Error> {
         let mut out: i64 = 0;
         let err = unsafe { cue_dec_int64(self.0, &raw mut out) };
         if err != 0 {
@@ -227,7 +166,7 @@ impl Value {
     ///
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
     /// not a CUE integer, or it does not fit in a [`u64`]).
-    pub fn as_u64(&self) -> Result<u64, Error> {
+    pub fn to_uint64(&self) -> Result<u64, Error> {
         let mut out: u64 = 0;
         let err = unsafe { cue_dec_uint64(self.0, &raw mut out) };
         if err != 0 {
@@ -244,7 +183,7 @@ impl Value {
     ///
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
     /// not a CUE boolean).
-    pub fn as_bool(&self) -> Result<bool, Error> {
+    pub fn to_bool(&self) -> Result<bool, Error> {
         let mut out: bool = false;
         let err = unsafe { cue_dec_bool(self.0, &raw mut out) };
         if err != 0 {
@@ -261,7 +200,7 @@ impl Value {
     ///
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
     /// not a CUE number).
-    pub fn as_f64(&self) -> Result<f64, Error> {
+    pub fn to_double(&self) -> Result<f64, Error> {
         let mut out: f64 = 0.0;
         let err = unsafe { cue_dec_double(self.0, &raw mut out) };
         if err != 0 {
@@ -280,7 +219,7 @@ impl Value {
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is not
     /// a CUE string), or [`Error::InvalidUtf8`] if the bytes returned by libcue
     /// are not valid UTF-8.
-    pub fn as_string(&self) -> Result<String, Error> {
+    pub fn to_string(&self) -> Result<String, Error> {
         let mut ptr: *mut c_char = core::ptr::null_mut();
         let err = unsafe { cue_dec_string(self.0, &raw mut ptr) };
         if err != 0 {
@@ -304,7 +243,7 @@ impl Value {
     ///
     /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is not
     /// a CUE bytes literal).
-    pub fn as_bytes(&self) -> Result<bytes::Bytes, Error> {
+    pub fn to_bytes(&self) -> Result<bytes::Bytes, Error> {
         let mut ptr: *mut core::ffi::c_void = core::ptr::null_mut();
         let mut size: usize = 0;
         let err = unsafe { cue_dec_bytes(self.0, &raw mut ptr, &raw mut size) };
