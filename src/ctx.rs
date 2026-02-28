@@ -26,6 +26,11 @@ impl Drop for Ctx {
 }
 
 impl Ctx {
+    /// Returns the raw libcue context handle.
+    pub(crate) fn handle(&self) -> usize {
+        self.0
+    }
+
     /// Creates a new CUE evaluation context.
     ///
     /// Calls `cue_newctx` from libcue and wraps the returned handle.
