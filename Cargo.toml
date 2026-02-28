@@ -2,7 +2,7 @@
 name = "cue-rs"
 version = "0.1.0"
 edition = "2024"
-description = "Rust bindings for the [CUE](https://cuelang.org) language runtime."
+description = "Rust bindings for the [CUE](https://cuelang.org), using [libcue](https://github.com/cue-lang/libcue)."
 repository = "https://github.com/Mr-Leshiy/cue-rs"
 authors = [
     "Oleksii Pozhylenkov (Mr-Leshiy) <leshiy12345678@gmail.com>"
