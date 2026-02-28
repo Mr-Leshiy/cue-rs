@@ -14,6 +14,10 @@ use crate::{
 type CueValueHandle = usize;
 
 unsafe extern "C" {
+    fn cue_validate(
+        v: CueValueHandle,
+        opts: *mut core::ffi::c_void,
+    ) -> usize;
     fn cue_is_equal(
         a: CueValueHandle,
         b: CueValueHandle,
@@ -42,6 +46,10 @@ unsafe extern "C" {
 ///
 /// Construct one via [`Value::compile_string`] or [`Value::compile_bytes`];
 /// the underlying handle is freed automatically when this value is dropped.
+///
+/// A successfully constructed `Value` may still represent an invalid CUE
+/// value (e.g. a bottom value produced by a conflicting unification).
+/// Call [`Value::is_valid`] to confirm the value is error-free before using it.
 #[derive(Debug)]
 pub struct Value(CueValueHandle);
 
@@ -138,5 +146,21 @@ impl Value {
         });
         unsafe { drop::libc_free(ptr) };
         Ok(result)
+    }
+
+    /// Validates this CUE value, returning an error if it is not valid.
+    ///
+    /// Calls `cue_validate` from libcue with no export options.  A value is
+    /// valid when it contains no errors (e.g. it is not a bottom value).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports a validation error.
+    pub fn is_valid(&self) -> Result<(), Error> {
+        let err = unsafe { cue_validate(self.0, core::ptr::null_mut()) };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(())
     }
 }
