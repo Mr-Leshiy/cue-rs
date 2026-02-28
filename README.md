@@ -33,3 +33,7 @@ let v = Value::compile_string(&ctx, r#"{ name: "alice", age: 30 }"#).unwrap();
 v.is_valid().unwrap();
 println!("{}", serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap());
 ```
+
+## Examples
+
+More examples can be found in the [`examples/`](examples/) directory.
