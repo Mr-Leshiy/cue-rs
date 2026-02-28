@@ -10,6 +10,12 @@ fn main() {
     println!("cargo:rerun-if-changed=go-cue/go.mod");
     println!("cargo:rerun-if-changed=go-cue/go.sum");
 
+    // docs.rs sets this env var; skip the Go build since it has no Go toolchain.
+    // cargo doc does not link, so omitting the link directives is safe.
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
+
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let go_dir = manifest_dir.join("libcue");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
