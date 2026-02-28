@@ -1,7 +1,7 @@
 #![allow(
     missing_docs,
     clippy::missing_docs_in_private_items,
-    clippy::unwrap_used,
+    clippy::unwrap_used
 )]
 
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
@@ -105,8 +105,7 @@ fn bench_unify(c: &mut Criterion) {
 
     g.bench_function("schema_meets_value", |b| {
         let schema = Value::compile_string(&ctx, "{ name: string, age: int & >0 }").unwrap();
-        let value =
-            Value::compile_string(&ctx, r#"{ name: "Alice", age: 30 }"#).unwrap();
+        let value = Value::compile_string(&ctx, r#"{ name: "Alice", age: 30 }"#).unwrap();
         b.iter(|| Value::unify(black_box(&schema), black_box(&value)));
     });
 
