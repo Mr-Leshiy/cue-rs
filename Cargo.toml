@@ -1,6 +1,6 @@
 [package]
 name = "cue-rs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Rust bindings for the [CUE](https://cuelang.org), using [libcue](https://github.com/cue-lang/libcue)."
 repository = "https://github.com/Mr-Leshiy/cue-rs"
