@@ -47,4 +47,8 @@ pub enum Error {
     /// A libcue operation returned a `cue_error` handle.
     #[error("{0}")]
     Cue(CueError),
+
+    /// A string decoded from libcue was not valid UTF-8.
+    #[error("decoded string is not valid UTF-8: {0}")]
+    InvalidUtf8(std::str::Utf8Error),
 }
