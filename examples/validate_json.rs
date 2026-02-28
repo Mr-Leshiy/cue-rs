@@ -4,8 +4,8 @@
 //! 1. Compile the CUE schema string into a [`cue_rs::Value`].
 //! 2. Serialize the JSON data to bytes and compile it into a second [`cue_rs::Value`].
 //! 3. Unify the schema and the data — in CUE, unification is the `&` operator.
-//! 4. Call [`cue_rs::Value::is_valid`] on the result; a bottom value (`_|_`) means
-//!    the data does not conform to the schema.
+//! 4. Call [`cue_rs::Value::is_valid`] on the result; a bottom value (`_|_`) means the
+//!    data does not conform to the schema.
 
 use cue_rs::{Ctx, Value, error::Error};
 
