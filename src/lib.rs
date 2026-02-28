@@ -1,4 +1,4 @@
-//! Rust bindings for the CUE language runtime, backed by a Go static library.
+#![doc = include_str!("../README.md")]
 
 pub mod ctx;
 mod drop;
