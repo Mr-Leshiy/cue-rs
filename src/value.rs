@@ -2,7 +2,7 @@
 
 use core::ffi::c_char;
 
-use crate::{Ctx, drop, error::CueError};
+use crate::{Ctx, drop, error::Error};
 
 /// Opaque handle to a libcue value (`cue_value` = `uintptr_t`).
 type CueValueHandle = usize;
@@ -56,10 +56,10 @@ impl Value {
     pub fn from_int64(
         ctx: &Ctx,
         val: i64,
-    ) -> Result<Self, CueError> {
+    ) -> Result<Self, Error> {
         let handle = unsafe { cue_from_int64(ctx.handle(), val) };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }
@@ -72,10 +72,10 @@ impl Value {
     pub fn from_uint64(
         ctx: &Ctx,
         val: u64,
-    ) -> Result<Self, CueError> {
+    ) -> Result<Self, Error> {
         let handle = unsafe { cue_from_uint64(ctx.handle(), val) };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }
@@ -88,10 +88,10 @@ impl Value {
     pub fn from_bool(
         ctx: &Ctx,
         val: bool,
-    ) -> Result<Self, CueError> {
+    ) -> Result<Self, Error> {
         let handle = unsafe { cue_from_bool(ctx.handle(), val) };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }
@@ -104,10 +104,10 @@ impl Value {
     pub fn from_double(
         ctx: &Ctx,
         val: f64,
-    ) -> Result<Self, CueError> {
+    ) -> Result<Self, Error> {
         let handle = unsafe { cue_from_double(ctx.handle(), val) };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }
@@ -121,11 +121,11 @@ impl Value {
     pub fn from_string(
         ctx: &Ctx,
         val: &str,
-    ) -> Result<Self, CueError> {
-        let cstr = std::ffi::CString::new(val).map_err(|e| CueError::StringContainsNul(e))?;
+    ) -> Result<Self, Error> {
+        let cstr = std::ffi::CString::new(val).map_err(|e| Error::StringContainsNul(e))?;
         let handle = unsafe { cue_from_string(ctx.handle(), cstr.as_ptr().cast_mut()) };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }
@@ -138,7 +138,7 @@ impl Value {
     pub fn from_bytes(
         ctx: &Ctx,
         val: &[u8],
-    ) -> Result<Self, CueError> {
+    ) -> Result<Self, Error> {
         let handle = unsafe {
             cue_from_bytes(
                 ctx.handle(),
@@ -147,7 +147,7 @@ impl Value {
             )
         };
         if handle == 0 {
-            return Err(CueError::ValueCreationFailed);
+            return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
     }

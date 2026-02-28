@@ -4,7 +4,7 @@ use thiserror::Error;
 
 /// Errors that can occur when working with CUE values.
 #[derive(Debug, Error)]
-pub enum CueError {
+pub enum Error {
     /// `cue_newctx` returned 0; the libcue runtime could not allocate a
     /// context.
     #[error("cue_newctx returned 0; the libcue runtime could not allocate a context")]
