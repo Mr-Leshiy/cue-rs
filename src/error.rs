@@ -16,7 +16,10 @@ unsafe extern "C" {
 pub struct CueError(pub(crate) CueErrorHandle);
 
 impl std::fmt::Display for CueError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         let ptr = unsafe { cue_error_string(self.0) };
         if ptr.is_null() {
             return f.write_str("<unknown cue error>");
