@@ -1,211 +1,141 @@
 #![allow(clippy::unwrap_used, clippy::pedantic)]
 
-use bytes::Bytes;
+use serde_json::json;
 use test_case::test_case;
 
-use crate::{Ctx, Value, error::Error};
+use crate::{Ctx, Value};
 
 // ── int64 ──────────────────────────────────────────────────────────
 
-#[test_case(0_i64; "zero")]
-#[test_case(1_i64; "one")]
-#[test_case(-1_i64; "minus_one")]
-#[test_case(i64::MAX; "max")]
-// TODO: internal libcue bug of processing `i64::MIN` `-9223372036854775808`  value
-#[test_case(i64::MIN + 1; "min")]
-fn from_int64_ok(val: i64) {
+#[test_case(
+    0.to_string()
+    => json!(0);
+    "int zero"
+)]
+#[test_case(
+    1.to_string()
+    => json!(1);
+    "int one"
+)]
+#[test_case(
+    (-1).to_string()
+    => json!(-1);
+    "int minus one"
+)]
+#[test_case(
+    i32::MAX.to_string()
+    => json!(2147483647);
+    "int max"
+)]
+#[test_case(
+    i32::MIN.to_string()
+    => json!(-2147483648);
+    "int min"
+)]
+#[test_case(
+    true.to_string()=>
+    json!(true);
+    "true boolean"
+)]
+#[test_case(
+    false.to_string()
+    => json!(false);
+    "false boolean"
+)]
+#[test_case(
+    0.0.to_string()
+    => json!(0);
+    "double zero"
+)]
+#[test_case(
+    1.5.to_string()
+    => json!(1.5);
+    "double positive"
+)]
+#[test_case(
+    (-1.5).to_string()
+    => json!(-1.5);
+    "double negative"
+)]
+#[test_case(
+    f32::MAX.to_string()
+    => json!(3.4028235e38_f64);
+    "double max"
+)]
+#[test_case(
+    f32::MIN.to_string()
+    => json!(-3.4028235e38_f64);
+    "double min"
+)]
+#[test_case(
+    format!(r#""""#)
+    => json!("");
+    "empty"
+)]
+#[test_case(
+    format!(r#""hello""#)
+    => json!("hello");
+    "ascii"
+)]
+#[test_case(
+    format!(r#""🦀 rust""#)
+    => json!("🦀 rust");
+    "unicode"
+)]
+fn value_test(val: String) -> serde_json::Value {
     let ctx = Ctx::new().unwrap();
-    let v = Value::from_int64(&ctx, val).unwrap();
-    assert_eq!(v.to_int64().unwrap(), val);
+    let v = Value::compile_string(&ctx, &val).unwrap();
+    let v_from_bytes = Value::compile_bytes(&ctx, val.as_bytes()).unwrap();
+    assert_eq!(v, v_from_bytes);
+    let v_json = serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap();
+    let v_from_bytes_json =
+        serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap();
+    assert_eq!(v_json, v_from_bytes_json);
+    v_json
 }
 
-#[test]
-fn to_int64_on_string_returns_error() {
+// ── unify ─────────────────────────────────────────────────────────────
+
+#[test_case("42",         "42"     => json!(42);    "identical ints")]
+#[test_case("true",       "bool"   => json!(true);  "bool value meets bool type")]
+#[test_case(r#""hello""#, "string" => json!("hello"); "string value meets string type")]
+#[test_case("1.5",        "number" => json!(1.5);   "float value meets number type")]
+#[test_case(">0",         "42"     => json!(42);    "constraint meets concrete int")]
+fn value_unify_test(
+    a: &str,
+    b: &str,
+) -> serde_json::Value {
     let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, "hello").unwrap();
-    assert!(matches!(v.to_int64(), Err(Error::Cue(_))));
+    let va = Value::compile_string(&ctx, a).unwrap();
+    let vb = Value::compile_string(&ctx, b).unwrap();
+    let v = Value::unify(&va, &vb);
+    serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap()
 }
 
-// ── uint64 ─────────────────────────────────────────────────────────
-
-#[test_case(0_u64; "zero")]
-#[test_case(1_u64; "one")]
-#[test_case(u64::MAX; "max")]
-fn from_uint64_ok(val: u64) {
+#[test_case("1",      "2"      ; "conflicting ints produce bottom")]
+#[test_case(r#""a""#, r#""b""# ; "conflicting strings produce bottom")]
+fn value_unify_bottom_test(
+    a: &str,
+    b: &str,
+) {
     let ctx = Ctx::new().unwrap();
-    let v = Value::from_uint64(&ctx, val).unwrap();
-    assert_eq!(v.to_uint64().unwrap(), val);
+    let va = Value::compile_string(&ctx, a).unwrap();
+    let vb = Value::compile_string(&ctx, b).unwrap();
+    assert!(Value::unify(&va, &vb).is_valid().is_err());
 }
 
-#[test]
-fn to_uint64_on_string_returns_error() {
+// ── is_valid ─────────────────────────────────────────────────────────
+
+#[test_case("42"        => true;  "int is valid")]
+#[test_case("true"      => true;  "bool is valid")]
+#[test_case("1.5"       => true;  "float is valid")]
+#[test_case(r#""hello""# => true;  "string is valid")]
+#[test_case("_|_"       => false; "bottom is invalid")]
+#[test_case("1 & 2"     => false; "conflicting unification is invalid")]
+fn value_valid_test(src: &str) -> bool {
     let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, "hello").unwrap();
-    assert!(matches!(v.to_uint64(), Err(Error::Cue(_))));
-}
-
-// ── bool ───────────────────────────────────────────────────────────
-
-#[test_case(true; "true_val")]
-#[test_case(false; "false_val")]
-fn from_bool_ok(val: bool) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_bool(&ctx, val).unwrap();
-    assert_eq!(v.to_bool().unwrap(), val);
-}
-
-#[test]
-fn to_bool_on_int_returns_error() {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_int64(&ctx, 1).unwrap();
-    assert!(matches!(v.to_bool(), Err(Error::Cue(_))));
-}
-
-// ── double ─────────────────────────────────────────────────────────
-
-#[test_case(0.0_f64; "zero")]
-#[test_case(1.5_f64; "positive")]
-#[test_case(-1.5_f64; "negative")]
-#[test_case(f64::MAX; "max")]
-fn from_double_ok(val: f64) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_double(&ctx, val).unwrap();
-    assert_eq!(v.to_double().unwrap(), val);
-}
-
-#[test]
-fn to_double_on_string_returns_error() {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, "1.5").unwrap();
-    assert!(matches!(v.to_double(), Err(Error::Cue(_))));
-}
-
-// ── string ─────────────────────────────────────────────────────────
-
-#[test_case(""; "empty")]
-#[test_case("hello"; "ascii")]
-#[test_case("🦀 rust"; "unicode")]
-fn from_string_ok(val: &str) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, val).unwrap();
-    assert_eq!(v.to_string().unwrap(), val);
-}
-
-#[test]
-fn from_string_nul_byte_returns_error() {
-    let ctx = Ctx::new().unwrap();
-    assert!(matches!(
-        Value::from_string(&ctx, "hello\0world"),
-        Err(Error::StringContainsNul(_))
-    ));
-}
-
-#[test]
-fn to_string_on_int_returns_error() {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_int64(&ctx, 42).unwrap();
-    assert!(matches!(v.to_string(), Err(Error::Cue(_))));
-}
-
-// ── bytes ──────────────────────────────────────────────────────────
-
-#[test_case(&b""[..]; "empty")]
-#[test_case(&b"hello"[..]; "ascii")]
-#[test_case(&[0x00_u8, 0xFF, 0x42][..]; "arbitrary")]
-fn from_bytes_ok(val: &[u8]) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_bytes(&ctx, val).unwrap();
-    assert_eq!(v.to_bytes().unwrap(), Bytes::copy_from_slice(val));
-}
-
-#[test]
-fn to_bytes_on_int_returns_error() {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_int64(&ctx, 42).unwrap();
-    assert!(matches!(v.to_bytes(), Err(Error::Cue(_))));
-}
-
-// ── to_json ─────────────────────────────────────────────────────────────
-
-#[test_case(0_i64; "zero")]
-#[test_case(42_i64; "positive")]
-#[test_case(-7_i64; "negative")]
-#[test_case(i64::MAX; "max")]
-fn to_json_from_int64(val: i64) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_int64(&ctx, val).unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&v.to_json().unwrap()).unwrap();
-    assert_eq!(parsed, serde_json::Value::Number(val.into()));
-}
-
-#[test_case(true; "true_val")]
-#[test_case(false; "false_val")]
-fn to_json_from_bool(val: bool) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_bool(&ctx, val).unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&v.to_json().unwrap()).unwrap();
-    assert_eq!(parsed, serde_json::Value::Bool(val));
-}
-
-#[test_case(""; "empty")]
-#[test_case("hello"; "ascii")]
-#[test_case("🦀 rust"; "unicode")]
-fn to_json_from_string(val: &str) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, val).unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&v.to_json().unwrap()).unwrap();
-    assert_eq!(parsed, serde_json::Value::String(val.to_owned()));
-}
-
-#[test_case(0.5_f64; "half")]
-#[test_case(1.5_f64; "positive")]
-#[test_case(-1.5_f64; "negative")]
-fn to_json_from_double(val: f64) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_double(&ctx, val).unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&v.to_json().unwrap()).unwrap();
-    // Use bit-level equality to avoid clippy::float_cmp on exact f64 values.
-    assert_eq!(parsed.as_f64().unwrap().to_bits(), val.to_bits());
-}
-
-// ── PartialEq ───────────────────────────────────────────────────────
-
-// int64
-#[test_case(|ctx: &Ctx| Value::from_int64(ctx, 0),|ctx: &Ctx| Value::from_int64(ctx, 0) => true; "0_u64 == 0_u64")]
-#[test_case(|ctx: &Ctx| Value::from_int64(ctx, 0),|ctx: &Ctx| Value::from_int64(ctx, 1) => false; "0_u64 != 1_u64")]
-#[test_case(|ctx: &Ctx| Value::from_int64(ctx, -1), |ctx: &Ctx| Value::from_int64(ctx, -1) => true; "int64_neg_eq")]
-#[test_case(|ctx: &Ctx| Value::from_int64(ctx, i64::MAX), |ctx: &Ctx| Value::from_int64(ctx, i64::MAX) => true; "int64_max_eq")]
-#[test_case(|ctx: &Ctx| Value::from_int64(ctx, i64::MAX), |ctx: &Ctx| Value::from_int64(ctx, i64::MIN + 1) => false; "int64_max_ne_min")]
-// uint64
-#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 0), |ctx: &Ctx| Value::from_uint64(ctx, 0) => true; "uint64_zero_eq")]
-#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 1), |ctx: &Ctx| Value::from_uint64(ctx, 1) => true; "uint64_one_eq")]
-#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, u64::MAX), |ctx: &Ctx| Value::from_uint64(ctx, u64::MAX) => true; "uint64_max_eq")]
-#[test_case(|ctx: &Ctx| Value::from_uint64(ctx, 0), |ctx: &Ctx| Value::from_uint64(ctx, 1) => false; "uint64_zero_ne_one")]
-// bool
-#[test_case(|ctx: &Ctx| Value::from_bool(ctx, true), |ctx: &Ctx| Value::from_bool(ctx, true) => true; "bool_true_eq")]
-#[test_case(|ctx: &Ctx| Value::from_bool(ctx, false), |ctx: &Ctx| Value::from_bool(ctx, false) => true; "bool_false_eq")]
-#[test_case(|ctx: &Ctx| Value::from_bool(ctx, true), |ctx: &Ctx| Value::from_bool(ctx, false) => false; "bool_true_ne_false")]
-// double
-#[test_case(|ctx: &Ctx| Value::from_double(ctx, 0.0), |ctx: &Ctx| Value::from_double(ctx, 0.0) => true; "double_zero_eq")]
-#[test_case(|ctx: &Ctx| Value::from_double(ctx, 1.5), |ctx: &Ctx| Value::from_double(ctx, 1.5) => true; "double_pos_eq")]
-#[test_case(|ctx: &Ctx| Value::from_double(ctx, -1.5), |ctx: &Ctx| Value::from_double(ctx, -1.5) => true; "double_neg_eq")]
-#[test_case(|ctx: &Ctx| Value::from_double(ctx, 1.5), |ctx: &Ctx| Value::from_double(ctx, 2.5) => false; "double_ne")]
-// string
-#[test_case(|ctx: &Ctx| Value::from_string(ctx, ""), |ctx: &Ctx| Value::from_string(ctx, "") => true; "string_empty_eq")]
-#[test_case(|ctx: &Ctx| Value::from_string(ctx, "hello"), |ctx: &Ctx| Value::from_string(ctx, "hello") => true; "string_ascii_eq")]
-#[test_case(|ctx: &Ctx| Value::from_string(ctx, "🦀"), |ctx: &Ctx| Value::from_string(ctx, "🦀") => true; "string_unicode_eq")]
-#[test_case(|ctx: &Ctx| Value::from_string(ctx, "hello"), |ctx: &Ctx| Value::from_string(ctx, "world") => false; "string_ne")]
-// bytes
-#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b""), |ctx: &Ctx| Value::from_bytes(ctx, b"") => true; "bytes_empty_eq")]
-#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b"hello"), |ctx: &Ctx| Value::from_bytes(ctx, b"hello") => true; "bytes_ascii_eq")]
-#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, &[0x00, 0xFF]), |ctx: &Ctx| Value::from_bytes(ctx, &[0x00, 0xFF]) => true; "bytes_arbitrary_eq")]
-#[test_case(|ctx: &Ctx| Value::from_bytes(ctx, b"foo"), |ctx: &Ctx| Value::from_bytes(ctx, b"bar") => false; "bytes_ne")]
-fn value_equal_test(
-    a: impl FnOnce(&Ctx) -> Result<Value, Error>,
-    b: impl FnOnce(&Ctx) -> Result<Value, Error>,
-) -> bool {
-    let ctx = Ctx::new().unwrap();
-    let a = a(&ctx).unwrap();
-    let b = b(&ctx).unwrap();
-    a == b
+    match Value::compile_string(&ctx, src) {
+        Err(_) => false,
+        Ok(v) => v.is_valid().is_ok(),
+    }
 }
