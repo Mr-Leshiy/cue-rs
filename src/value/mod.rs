@@ -172,7 +172,7 @@ impl Value {
         ctx: &Ctx,
         val: &str,
     ) -> Result<Self, Error> {
-        let cstr = std::ffi::CString::new(val).map_err(|e| Error::StringContainsNul(e))?;
+        let cstr = std::ffi::CString::new(val).map_err(Error::StringContainsNul)?;
         let handle = unsafe { cue_from_string(ctx.handle(), cstr.as_ptr().cast_mut()) };
         if handle == 0 {
             return Err(Error::ValueCreationFailed);
@@ -212,7 +212,7 @@ impl Value {
     /// not a CUE integer, or it does not fit in an [`i64`]).
     pub fn to_int64(&self) -> Result<i64, Error> {
         let mut out: i64 = 0;
-        let err = unsafe { cue_dec_int64(self.0, &mut out) };
+        let err = unsafe { cue_dec_int64(self.0, &raw mut out) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -229,7 +229,7 @@ impl Value {
     /// not a CUE integer, or it does not fit in a [`u64`]).
     pub fn to_uint64(&self) -> Result<u64, Error> {
         let mut out: u64 = 0;
-        let err = unsafe { cue_dec_uint64(self.0, &mut out) };
+        let err = unsafe { cue_dec_uint64(self.0, &raw mut out) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -246,7 +246,7 @@ impl Value {
     /// not a CUE boolean).
     pub fn to_bool(&self) -> Result<bool, Error> {
         let mut out: bool = false;
-        let err = unsafe { cue_dec_bool(self.0, &mut out) };
+        let err = unsafe { cue_dec_bool(self.0, &raw mut out) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -263,7 +263,7 @@ impl Value {
     /// not a CUE number).
     pub fn to_double(&self) -> Result<f64, Error> {
         let mut out: f64 = 0.0;
-        let err = unsafe { cue_dec_double(self.0, &mut out) };
+        let err = unsafe { cue_dec_double(self.0, &raw mut out) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -282,7 +282,7 @@ impl Value {
     /// are not valid UTF-8.
     pub fn to_string(&self) -> Result<String, Error> {
         let mut ptr: *mut c_char = core::ptr::null_mut();
-        let err = unsafe { cue_dec_string(self.0, &mut ptr) };
+        let err = unsafe { cue_dec_string(self.0, &raw mut ptr) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -307,7 +307,7 @@ impl Value {
     pub fn to_bytes(&self) -> Result<bytes::Bytes, Error> {
         let mut ptr: *mut core::ffi::c_void = core::ptr::null_mut();
         let mut size: usize = 0;
-        let err = unsafe { cue_dec_bytes(self.0, &mut ptr, &mut size) };
+        let err = unsafe { cue_dec_bytes(self.0, &raw mut ptr, &raw mut size) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }
@@ -331,7 +331,7 @@ impl Value {
     pub fn to_json(&self) -> Result<bytes::Bytes, Error> {
         let mut ptr: *mut core::ffi::c_void = core::ptr::null_mut();
         let mut size: usize = 0;
-        let err = unsafe { cue_dec_json(self.0, &mut ptr, &mut size) };
+        let err = unsafe { cue_dec_json(self.0, &raw mut ptr, &raw mut size) };
         if err != 0 {
             return Err(Error::Cue(CueError(err)));
         }

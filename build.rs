@@ -1,5 +1,7 @@
 //! Build script for cue-rs: compiles libcue into a static C archive.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::{env, path::PathBuf, process::Command};
 
 fn main() {
