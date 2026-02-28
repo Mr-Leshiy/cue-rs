@@ -22,6 +22,8 @@ jobs:
         run: cargo +nightly fmt --check
       - name: Run clippy
         run: cargo clippy --all-targets
+      - name: Rust docs
+        run: cargo doc
 
   build:
     strategy:

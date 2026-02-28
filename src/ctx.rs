@@ -37,7 +37,7 @@ impl Ctx {
     ///
     /// # Errors
     ///
-    /// Returns [`CueError::ContextCreationFailed`] if `cue_newctx` returns 0,
+    /// Returns [`Error::ContextCreationFailed`] if `cue_newctx` returns 0,
     /// indicating that the libcue runtime could not allocate a context.
     pub fn new() -> Result<Self, Error> {
         let handle = unsafe { cue_newctx() };

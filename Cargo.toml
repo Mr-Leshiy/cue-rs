@@ -8,9 +8,6 @@ authors = [
     "Oleksii Pozhylenkov (Mr-Leshiy) <leshiy12345678@gmail.com>"
 ]
 license = "MIT OR Apache-2.0"
-[package.metadata.docs.rs]
-# docs.rs has no Go toolchain; build.rs skips compilation when DOCS_RS is set.
-rustdoc-args = ["--cfg", "docsrs"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(track_caller)'] }
