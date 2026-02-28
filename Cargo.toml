@@ -51,6 +51,11 @@ bytes = "1"
 thiserror = "2.0.18"
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 serde_json = "1.0.149"
 serde_yml = "0.0.12"
 test-case = "3.3.1"
+
+[[bench]]
+name = "value"
+harness = false
