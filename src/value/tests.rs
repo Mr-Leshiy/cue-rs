@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used, clippy::pedantic)]
-
 use serde_json::json;
 use test_case::test_case;
 

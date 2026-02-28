@@ -1,4 +1,8 @@
-#![allow(missing_docs, clippy::missing_docs_in_private_items)]
+#![allow(
+    missing_docs,
+    clippy::missing_docs_in_private_items,
+    clippy::unwrap_used,
+)]
 
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
 use cue_rs::{Ctx, Value};
@@ -6,7 +10,7 @@ use cue_rs::{Ctx, Value};
 // ── compile_string ────────────────────────────────────────────────────────────
 
 fn bench_compile_string(c: &mut Criterion) {
-    let ctx = Ctx::new().expect("ctx");
+    let ctx = Ctx::new().unwrap();
 
     let mut g = c.benchmark_group("compile_string");
 
@@ -37,7 +41,7 @@ fn bench_compile_string(c: &mut Criterion) {
 // ── compile_bytes ─────────────────────────────────────────────────────────────
 
 fn bench_compile_bytes(c: &mut Criterion) {
-    let ctx = Ctx::new().expect("ctx");
+    let ctx = Ctx::new().unwrap();
 
     let mut g = c.benchmark_group("compile_bytes");
 
@@ -60,7 +64,7 @@ fn bench_compile_bytes(c: &mut Criterion) {
 // ── is_valid ──────────────────────────────────────────────────────────────────
 
 fn bench_is_valid(c: &mut Criterion) {
-    let ctx = Ctx::new().expect("ctx");
+    let ctx = Ctx::new().unwrap();
 
     let mut g = c.benchmark_group("is_valid");
 
@@ -89,7 +93,7 @@ fn bench_is_valid(c: &mut Criterion) {
 // ── unify ─────────────────────────────────────────────────────────────────────
 
 fn bench_unify(c: &mut Criterion) {
-    let ctx = Ctx::new().expect("ctx");
+    let ctx = Ctx::new().unwrap();
 
     let mut g = c.benchmark_group("unify");
 
