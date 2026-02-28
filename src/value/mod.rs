@@ -39,6 +39,22 @@ unsafe extern "C" {
         data: *mut core::ffi::c_void,
         len: usize,
     ) -> CueValueHandle;
+    fn cue_dec_int64(
+        v: CueValueHandle,
+        res: *mut i64,
+    ) -> usize;
+    fn cue_dec_uint64(
+        v: CueValueHandle,
+        res: *mut u64,
+    ) -> usize;
+    fn cue_dec_bool(
+        v: CueValueHandle,
+        res: *mut bool,
+    ) -> usize;
+    fn cue_dec_double(
+        v: CueValueHandle,
+        res: *mut f64,
+    ) -> usize;
     fn cue_dec_string(
         v: CueValueHandle,
         res: *mut *mut c_char,
@@ -170,6 +186,74 @@ impl Value {
             return Err(Error::ValueCreationFailed);
         }
         Ok(Self(handle))
+    }
+
+    /// Decodes this CUE value as an [`i64`].
+    ///
+    /// Calls `cue_dec_int64` from libcue.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
+    /// not a CUE integer, or it does not fit in an [`i64`]).
+    pub fn to_int64(&self) -> Result<i64, Error> {
+        let mut out: i64 = 0;
+        let err = unsafe { cue_dec_int64(self.0, &mut out) };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(out)
+    }
+
+    /// Decodes this CUE value as a [`u64`].
+    ///
+    /// Calls `cue_dec_uint64` from libcue.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
+    /// not a CUE integer, or it does not fit in a [`u64`]).
+    pub fn to_uint64(&self) -> Result<u64, Error> {
+        let mut out: u64 = 0;
+        let err = unsafe { cue_dec_uint64(self.0, &mut out) };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(out)
+    }
+
+    /// Decodes this CUE value as a [`bool`].
+    ///
+    /// Calls `cue_dec_bool` from libcue.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
+    /// not a CUE boolean).
+    pub fn to_bool(&self) -> Result<bool, Error> {
+        let mut out: bool = false;
+        let err = unsafe { cue_dec_bool(self.0, &mut out) };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(out)
+    }
+
+    /// Decodes this CUE value as an [`f64`].
+    ///
+    /// Calls `cue_dec_double` from libcue.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Cue`] if libcue reports an error (e.g. the value is
+    /// not a CUE number).
+    pub fn to_double(&self) -> Result<f64, Error> {
+        let mut out: f64 = 0.0;
+        let err = unsafe { cue_dec_double(self.0, &mut out) };
+        if err != 0 {
+            return Err(Error::Cue(CueError(err)));
+        }
+        Ok(out)
     }
 
     /// Decodes this CUE value as a UTF-8 string.

@@ -1,10 +1,11 @@
 #![allow(clippy::unwrap_used, clippy::pedantic)]
+
 use bytes::Bytes;
 use test_case::test_case;
 
 use crate::{Ctx, Value, error::Error};
 
-// ── from_int64 ──────────────────────────────────────────────────────────
+// ── int64 ──────────────────────────────────────────────────────────
 
 #[test_case(0_i64; "zero")]
 #[test_case(1_i64; "one")]
@@ -13,29 +14,53 @@ use crate::{Ctx, Value, error::Error};
 #[test_case(i64::MIN; "min")]
 fn from_int64_ok(val: i64) {
     let ctx = Ctx::new().unwrap();
-    assert!(Value::from_int64(&ctx, val).is_ok());
+    let v = Value::from_int64(&ctx, val).unwrap();
+    assert_eq!(v.to_int64().unwrap(), val);
 }
 
-// ── from_uint64 ─────────────────────────────────────────────────────────
+#[test]
+fn to_int64_on_string_returns_error() {
+    let ctx = Ctx::new().unwrap();
+    let v = Value::from_string(&ctx, "hello").unwrap();
+    assert!(matches!(v.to_int64(), Err(Error::Cue(_))));
+}
+
+// ── uint64 ─────────────────────────────────────────────────────────
 
 #[test_case(0_u64; "zero")]
 #[test_case(1_u64; "one")]
 #[test_case(u64::MAX; "max")]
 fn from_uint64_ok(val: u64) {
     let ctx = Ctx::new().unwrap();
-    assert!(Value::from_uint64(&ctx, val).is_ok());
+    let v = Value::from_uint64(&ctx, val).unwrap();
+    assert_eq!(v.to_uint64().unwrap(), val);
 }
 
-// ── from_bool ───────────────────────────────────────────────────────────
+#[test]
+fn to_uint64_on_string_returns_error() {
+    let ctx = Ctx::new().unwrap();
+    let v = Value::from_string(&ctx, "hello").unwrap();
+    assert!(matches!(v.to_uint64(), Err(Error::Cue(_))));
+}
+
+// ── bool ───────────────────────────────────────────────────────────
 
 #[test_case(true; "true_val")]
 #[test_case(false; "false_val")]
 fn from_bool_ok(val: bool) {
     let ctx = Ctx::new().unwrap();
-    assert!(Value::from_bool(&ctx, val).is_ok());
+    let v = Value::from_bool(&ctx, val).unwrap();
+    assert_eq!(v.to_bool().unwrap(), val);
 }
 
-// ── from_double ─────────────────────────────────────────────────────────
+#[test]
+fn to_bool_on_int_returns_error() {
+    let ctx = Ctx::new().unwrap();
+    let v = Value::from_int64(&ctx, 1).unwrap();
+    assert!(matches!(v.to_bool(), Err(Error::Cue(_))));
+}
+
+// ── double ─────────────────────────────────────────────────────────
 
 #[test_case(0.0_f64; "zero")]
 #[test_case(1.5_f64; "positive")]
@@ -43,17 +68,26 @@ fn from_bool_ok(val: bool) {
 #[test_case(f64::MAX; "max")]
 fn from_double_ok(val: f64) {
     let ctx = Ctx::new().unwrap();
-    assert!(Value::from_double(&ctx, val).is_ok());
+    let v = Value::from_double(&ctx, val).unwrap();
+    assert_eq!(v.to_double().unwrap(), val);
 }
 
-// ── from_string ─────────────────────────────────────────────────────────
+#[test]
+fn to_double_on_string_returns_error() {
+    let ctx = Ctx::new().unwrap();
+    let v = Value::from_string(&ctx, "1.5").unwrap();
+    assert!(matches!(v.to_double(), Err(Error::Cue(_))));
+}
+
+// ── string ─────────────────────────────────────────────────────────
 
 #[test_case(""; "empty")]
 #[test_case("hello"; "ascii")]
 #[test_case("🦀 rust"; "unicode")]
 fn from_string_ok(val: &str) {
     let ctx = Ctx::new().unwrap();
-    assert!(Value::from_string(&ctx, val).is_ok());
+    let v = Value::from_string(&ctx, val).unwrap();
+    assert_eq!(v.to_string().unwrap(), val);
 }
 
 #[test]
@@ -65,27 +99,6 @@ fn from_string_nul_byte_returns_error() {
     ));
 }
 
-// ── from_bytes ──────────────────────────────────────────────────────────
-
-#[test_case(&b""[..]; "empty")]
-#[test_case(&b"hello"[..]; "ascii")]
-#[test_case(&[0x00_u8, 0xFF, 0x42][..]; "arbitrary")]
-fn from_bytes_ok(val: &[u8]) {
-    let ctx = Ctx::new().unwrap();
-    assert!(Value::from_bytes(&ctx, val).is_ok());
-}
-
-// ── to_string ───────────────────────────────────────────────────────────
-
-#[test_case(""; "empty")]
-#[test_case("hello"; "ascii")]
-#[test_case("🦀 rust"; "unicode")]
-fn to_string_roundtrip(val: &str) {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_string(&ctx, val).unwrap();
-    assert_eq!(v.to_string().unwrap(), val);
-}
-
 #[test]
 fn to_string_on_int_returns_error() {
     let ctx = Ctx::new().unwrap();
@@ -93,12 +106,12 @@ fn to_string_on_int_returns_error() {
     assert!(matches!(v.to_string(), Err(Error::Cue(_))));
 }
 
-// ── to_bytes ────────────────────────────────────────────────────────────
+// ── bytes ──────────────────────────────────────────────────────────
 
 #[test_case(&b""[..]; "empty")]
 #[test_case(&b"hello"[..]; "ascii")]
 #[test_case(&[0x00_u8, 0xFF, 0x42][..]; "arbitrary")]
-fn to_bytes_roundtrip(val: &[u8]) {
+fn from_bytes_ok(val: &[u8]) {
     let ctx = Ctx::new().unwrap();
     let v = Value::from_bytes(&ctx, val).unwrap();
     assert_eq!(v.to_bytes().unwrap(), Bytes::copy_from_slice(val));
