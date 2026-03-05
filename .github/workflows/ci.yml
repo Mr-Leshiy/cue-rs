@@ -24,6 +24,8 @@ jobs:
         run: cargo clippy --all-targets
       - name: Rust docs
         run: cargo doc
+      - name: Deny
+        uses: EmbarkStudios/cargo-deny-action@v2
 
   build:
     strategy:

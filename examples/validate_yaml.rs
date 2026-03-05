@@ -16,7 +16,7 @@ use cue_rs::{Ctx, Value};
 fn validate(
     ctx: &Ctx,
     schema: &Value,
-    data: &serde_yml::Value,
+    data: &yaml_serde::Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let json_val = serde_json::to_value(data)?;
     let json_bytes = serde_json::to_vec(&json_val)?;
@@ -32,21 +32,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema = Value::compile_string(&ctx, r"{ name: string, age: int & >=0 }")?;
 
     // ✓ Valid: both fields satisfy the schema.
-    let valid: serde_yml::Value = serde_yml::from_str("name: alice\nage: 30")?;
+    let valid: yaml_serde::Value = yaml_serde::from_str("name: alice\nage: 30")?;
     match validate(&ctx, &schema, &valid) {
         Ok(()) => println!("valid:    {valid:?}"),
         Err(e) => println!("unexpected failure: {e}"),
     }
 
     // ✗ Invalid: `age` is negative, violating `>=0`.
-    let invalid_age: serde_yml::Value = serde_yml::from_str("name: bob\nage: -1")?;
+    let invalid_age: yaml_serde::Value = yaml_serde::from_str("name: bob\nage: -1")?;
     match validate(&ctx, &schema, &invalid_age) {
         Ok(()) => println!("unexpected success"),
         Err(e) => println!("invalid:  {invalid_age:?}  ({e})"),
     }
 
     // ✗ Invalid: `name` is an integer, not a string.
-    let invalid_type: serde_yml::Value = serde_yml::from_str("name: 42\nage: 25")?;
+    let invalid_type: yaml_serde::Value = yaml_serde::from_str("name: 42\nage: 25")?;
     match validate(&ctx, &schema, &invalid_type) {
         Ok(()) => println!("unexpected success"),
         Err(e) => println!("invalid:  {invalid_type:?}  ({e})"),
