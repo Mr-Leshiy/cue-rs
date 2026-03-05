@@ -19,9 +19,9 @@ main:
     - apt install -y zsh
     # neovim
     - apt-get install -y neovim
-  workspace: shell_cell
+  workspace: cue-rs
   shell: /bin/zsh
   hang: while true; do sleep 3600; done
   config:
     mounts:
-      - ./:/shell_cell
+      - ./:/cue-rs
