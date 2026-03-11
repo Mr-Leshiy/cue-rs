@@ -5,6 +5,11 @@
 use std::{env, path::PathBuf, process::Command};
 
 fn main() {
+    // Docs.rs build, skip everything
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
+
     // Rebuild whenever the module manifest or lockfile changes (i.e. a version
     // bump of github.com/cue-lang/libcue).
     println!("cargo:rerun-if-changed=go-cue/go.mod");
