@@ -26,6 +26,10 @@ unsafe extern "C" {
         a: CueValueHandle,
         b: CueValueHandle,
     ) -> CueValueHandle;
+    fn cue_from_string(
+        ctx: usize,
+        s: *mut c_char,
+    ) -> CueValueHandle;
     fn cue_compile_string(
         ctx: usize,
         src: *mut c_char,
@@ -73,6 +77,24 @@ impl PartialEq for Value {
 }
 
 impl Value {
+    /// Creates a CUE string value from a Rust `&str`.
+    ///
+    /// This wraps the literal string content as a CUE `string` typed value via
+    /// `cue_from_string`.  It is **not** a source compilation — use
+    /// [`Value::compile_string`] if you have CUE source text.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::StringContainsNul`] if `s` contains interior nul bytes.
+    pub fn from_str(
+        ctx: &Ctx,
+        s: &str,
+    ) -> Result<Self, Error> {
+        let cstr = std::ffi::CString::new(s).map_err(Error::StringContainsNul)?;
+        let handle = unsafe { cue_from_string(ctx.handle(), cstr.as_ptr().cast_mut()) };
+        Ok(Self(handle))
+    }
+
     /// Compiles a CUE source string into a [`Value`].
     ///
     /// # Errors
