@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug or issue with shell-cell
+about: Report a bug or issue with cue-rs
 title: ''
 labels: 'bug'
 assignees: ''
