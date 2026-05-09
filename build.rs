@@ -1,6 +1,10 @@
 //! Build script for cue-rs: compiles libcue into a static C archive.
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::missing_docs_in_private_items
+)]
 
 use std::{
     env, fs,
@@ -55,7 +59,7 @@ fn main() {
     if cfg!(feature = "shared") {
         println!("cargo:rustc-link-lib=dylib=cue");
     } else {
-       println!("cargo:rustc-link-lib=static=cue");
+        println!("cargo:rustc-link-lib=static=cue");
     }
 
     // The Go runtime leaves platform system-library symbols unresolved in the
