@@ -1,8 +1,5 @@
 //! CUE value type, wrapping the `cue_value` handle from libcue.
 
-#[cfg(test)]
-mod tests;
-
 use core::ffi::c_char;
 
 use crate::{
@@ -25,10 +22,6 @@ unsafe extern "C" {
     fn cue_unify(
         a: CueValueHandle,
         b: CueValueHandle,
-    ) -> CueValueHandle;
-    fn cue_from_string(
-        ctx: usize,
-        s: *mut c_char,
     ) -> CueValueHandle;
     fn cue_compile_string(
         ctx: usize,

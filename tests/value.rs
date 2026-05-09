@@ -1,7 +1,9 @@
+//! 
+
 use serde_json::json;
 use test_case::test_case;
 
-use crate::{Ctx, Value};
+use cue_rs::{Ctx, Value};
 
 // ── int64 ──────────────────────────────────────────────────────────
 
@@ -90,19 +92,6 @@ fn value_test(val: &str) -> serde_json::Value {
         serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap();
     assert_eq!(v_json, v_from_bytes_json);
     v_json
-}
-
-// ── from_str ──────────────────────────────────────────────────────────
-
-#[test_case("" => json!(""); "empty string")]
-#[test_case("hello" => json!("hello"); "ascii string")]
-#[test_case("🦀 rust" => json!("🦀 rust"); "unicode string")]
-#[test_case("with\nnewline" => json!("with\nnewline"); "string with newline")]
-#[test_case(r#"some: "\(value)""# => json!(r#"some: "\(value)""#); "cue interpolation syntax as literal")]
-fn value_from_str_test(s: &str) -> serde_json::Value {
-    let ctx = Ctx::new().unwrap();
-    let v = Value::from_str(&ctx, s).unwrap();
-    serde_json::from_slice::<serde_json::Value>(&v.to_json_bytes().unwrap()).unwrap()
 }
 
 // ── unify ─────────────────────────────────────────────────────────────
