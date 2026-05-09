@@ -1,4 +1,4 @@
-//!
+#![allow(clippy::unwrap_used, missing_docs)]
 
 use cue_rs::{Ctx, Value};
 use serde_json::json;
