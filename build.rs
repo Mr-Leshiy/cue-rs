@@ -2,7 +2,22 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use std::{env, path::PathBuf, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+fn watch_dir(dir: &Path) {
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            watch_dir(&path);
+        } else {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
+    }
+}
 
 fn main() {
     // Docs.rs build, skip everything
@@ -10,23 +25,22 @@ fn main() {
         return;
     }
 
-    // Rebuild whenever the module manifest or lockfile changes (i.e. a version
-    // bump of github.com/cue-lang/libcue).
-    println!("cargo:rerun-if-changed=go-cue/go.mod");
-    println!("cargo:rerun-if-changed=go-cue/go.sum");
-
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    watch_dir(&manifest_dir.join("libcue"));
     let go_dir = manifest_dir.join("libcue");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let lib_out = out_dir.join("libcue.a");
 
+    let build_mode = if cfg!(feature = "shared") {
+        "-buildmode=c-shared"
+    } else {
+        "-buildmode=c-archive"
+    };
+
     let status = Command::new("go")
         .args([
             "build",
-            // Build the external module (github.com/cue-lang/libcue), which
-            // declares `package main` and exports C symbols via cgo, into a
-            // static C archive.
-            "-buildmode=c-archive",
+            build_mode,
             "-o",
             lib_out.to_str().expect("lib_out path is not valid UTF-8"),
             "github.com/cue-lang/libcue",
@@ -38,7 +52,11 @@ fn main() {
     assert!(status.success(), "go build failed");
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
-    println!("cargo:rustc-link-lib=static=cue");
+    if cfg!(feature = "shared") {
+        println!("cargo:rustc-link-lib=dylib=cue");
+    } else {
+       println!("cargo:rustc-link-lib=static=cue");
+    }
 
     // The Go runtime leaves platform system-library symbols unresolved in the
     // static archive; the final Rust linker must supply them.

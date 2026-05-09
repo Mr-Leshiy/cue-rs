@@ -9,6 +9,11 @@ authors = [
 ]
 license = "MIT OR Apache-2.0"
 
+[features]
+# If provided use `-buildmode=c-shared` for dynamic linkage,
+# otherwise `-buildmode=c-archive` for static linkage
+shared = []
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(track_caller)'] }
 warnings = "deny"
