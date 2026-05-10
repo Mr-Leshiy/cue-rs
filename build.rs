@@ -88,7 +88,7 @@ fn link_shared(
 
     // Copy the shared lib to where every binary that links cue-rs will be
     // produced.  Without this, doctest binaries (compiled into a fresh
-    // `/tmp/rustdoctestXXXX/rust_out`) and tests under `target/.../deps/`
+    // `/tmp/rustdoctestXXXX/rust_out`)
     // cannot find `libcue.{so,dylib}` at runtime — only the absolute
     // rpath baked below saves them.
     let target_dir = out_dir
