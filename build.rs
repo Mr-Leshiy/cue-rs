@@ -37,7 +37,7 @@ fn main() {
     let (build_mode, lib_out) = if cfg!(feature = "shared") {
         ("-buildmode=c-shared", out_dir.join("libcue.so"))
     } else {
-       ("-buildmode=c-archive",  out_dir.join("libcue.a"))
+        ("-buildmode=c-archive", out_dir.join("libcue.a"))
     };
 
     let status = Command::new("go")
@@ -53,7 +53,7 @@ fn main() {
         .expect("failed to run go build");
 
     assert!(status.success(), "go build failed");
-    
+
     println!("cargo:rustc-link-search=all={}", out_dir.display());
     if cfg!(feature = "shared") {
         println!("cargo:rustc-link-lib=dylib=cue");
