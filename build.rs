@@ -33,12 +33,11 @@ fn main() {
     watch_dir(&manifest_dir.join("libcue"));
     let go_dir = manifest_dir.join("libcue");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let lib_out = out_dir.join("libcue.a");
 
-    let build_mode = if cfg!(feature = "shared") {
-        "-buildmode=c-shared"
+    let (build_mode, lib_out) = if cfg!(feature = "shared") {
+        ("-buildmode=c-shared", out_dir.join("libcue.so"))
     } else {
-        "-buildmode=c-archive"
+       ("-buildmode=c-archive",  out_dir.join("libcue.a"))
     };
 
     let status = Command::new("go")
