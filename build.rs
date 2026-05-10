@@ -36,7 +36,7 @@ fn main() {
     // CARGO_CFG_TARGET_OS reflects the actual cargo `--target`, unlike
     // `cfg!(target_os)` which reflects the host of the build script.
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
-    let shared = env::var("CARGO_FEATURE_SHARED").is_ok();
+    let shared = cfg!(feature = "shared");
 
     let lib_filename = match (shared, target_os.as_str()) {
         (false, _) => "libcue.a",
