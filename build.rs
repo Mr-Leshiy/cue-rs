@@ -67,7 +67,7 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", out_dir.display());
 
     if shared {
-        link_shared(&out_dir, lib_filename, &target_os);
+        link_shared(&out_dir, lib_filename);
     } else {
         println!("cargo:rustc-link-lib=static=cue");
     }
@@ -83,7 +83,6 @@ fn main() {
 fn link_shared(
     out_dir: &Path,
     lib_filename: &str,
-    _target_os: &str,
 ) {
     println!("cargo:rustc-link-lib=dylib=cue");
 
