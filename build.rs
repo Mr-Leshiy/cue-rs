@@ -1,20 +1,4 @@
-//! Build script for cue-rs: compiles libcue and links it into the crate.
-//!
-//! Two link modes, selected by the `shared` Cargo feature:
-//!
-//! * default          — `-buildmode=c-archive`, statically linked.  No
-//!                      runtime path concerns.
-//! * `shared` feature — `-buildmode=c-shared`, dynamically linked.  The
-//!                      resulting `libcue.{so,dylib}` is produced under
-//!                      `OUT_DIR` by Cargo convention, but the loader
-//!                      only knows where to look at runtime if we tell
-//!                      it.  This script does so by:
-//!                        1. copying the shared lib next to the binaries
-//!                           cargo will produce (target/<...>/<profile>/
-//!                           and the deps subdir where unit-test and
-//!                           doctest binaries live), and
-//!                        2. baking absolute and relative rpaths into
-//!                           every binary linked against this crate.
+//! Build script for cue-rs: compiles libcue into a static C archive.
 
 #![allow(
     clippy::unwrap_used,
@@ -99,7 +83,7 @@ fn main() {
 fn link_shared(
     out_dir: &Path,
     lib_filename: &str,
-    target_os: &str,
+    _target_os: &str,
 ) {
     println!("cargo:rustc-link-lib=dylib=cue");
 
@@ -108,7 +92,7 @@ fn link_shared(
     // `/tmp/rustdoctestXXXX/rust_out`) and tests under `target/.../deps/`
     // cannot find `libcue.{so,dylib}` at runtime — only the absolute
     // rpath baked below saves them.
-    let profile_dir = out_dir
+    let target_dir = out_dir
         .ancestors()
         .find(|p| {
             p.file_name()
@@ -117,30 +101,13 @@ fn link_shared(
                 .unwrap_or(false)
         })
         .expect("OUT_DIR is not under target/<...>/<profile>/");
-    let deps_dir = profile_dir.join("deps");
-    fs::create_dir_all(&deps_dir).unwrap();
     let src = out_dir.join(lib_filename);
-    fs::copy(&src, profile_dir.join(lib_filename)).unwrap();
-    fs::copy(&src, deps_dir.join(lib_filename)).unwrap();
+    fs::copy(&src, target_dir.join(lib_filename)).unwrap();
 
     // Absolute rpath into the deps dir.  Doctest binaries live in a
     // throwaway tmp directory so $ORIGIN cannot reach them; the absolute
     // path resolves regardless of where the binary runs from.  This is a
     // dev/CI convenience — it bakes a build-machine path into the binary,
     // so consumer crates that ship binaries should not enable `shared`.
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", deps_dir.display());
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", profile_dir.display());
-
-    // Relative rpath so a moved/installed tree (binary + libcue.so kept
-    // adjacent) keeps working.  Linux uses $ORIGIN, macOS uses
-    // @loader_path; both are resolved by the loader at run time
-    // relative to the binary's actual location.
-    let origin = if target_os == "macos" {
-        "@loader_path"
-    } else {
-        "$ORIGIN"
-    };
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{origin}");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{origin}/deps");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{origin}/..");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", target_dir.display());
 }
