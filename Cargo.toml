@@ -1,6 +1,6 @@
 [package]
 name = "cue-rs"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2024"
 description = "Rust bindings for the CUElang, using libcue."
 repository = "https://github.com/Mr-Leshiy/cue-rs"
@@ -8,6 +8,11 @@ authors = [
     "Oleksii Pozhylenkov (Mr-Leshiy) <leshiy12345678@gmail.com>"
 ]
 license = "MIT OR Apache-2.0"
+
+[features]
+# If provided use `-buildmode=c-shared` for dynamic linkage,
+# otherwise `-buildmode=c-archive` for static linkage
+shared = []
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(track_caller)'] }
