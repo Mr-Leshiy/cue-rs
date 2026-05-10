@@ -97,8 +97,7 @@ fn link_shared(
         .find(|p| {
             p.file_name()
                 .and_then(|n| n.to_str())
-                .map(|n| n == "debug" || n == "release")
-                .unwrap_or(false)
+                .is_some_and(|n| n == "debug" || n == "release")
         })
         .expect("OUT_DIR is not under target/<...>/<profile>/");
     let src = out_dir.join(lib_filename);
