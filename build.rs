@@ -86,10 +86,10 @@ fn link_shared(
 ) {
     println!("cargo:rustc-link-lib=dylib=cue");
 
-    // Copy the shared lib to where every binary that links cue-rs will be
+    // Copy the shared lib to where every binary that links will be
     // produced.  Without this, doctest binaries (compiled into a fresh
     // `/tmp/rustdoctestXXXX/rust_out`)
-    // cannot find `libcue.{so,dylib}` at runtime — only the absolute
+    // cannot find `.{so,dylib}` at runtime — only the absolute
     // rpath baked below saves them.
     let target_dir = out_dir
         .ancestors()
